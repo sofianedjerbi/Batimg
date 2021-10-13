@@ -55,6 +55,6 @@ pub fn print_image(image: RgbImage){
             let px = image.get_pixel(j, i);
             printc!((*px)[0], (*px)[1], (*px)[2]);
         }
-        print!("\n");
+        print!("\x1b[0m\n");
     }
 }

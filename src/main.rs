@@ -27,19 +27,19 @@ fn main() {
         .get_matches();
 
     // Variables to populate
-    let mut file: &str;
-    let mut width: u32;
-    let mut height: u32;
-    let mut is_video: bool;
-    let mut is_picture: bool;
+    let file: &str;
+    //let width: u32;
+    let height: u32;
+    let is_video: bool;
+    let is_picture: bool;
 
     // GET CANVAS SIZE
     let size = terminal_size(); // Request term size
     if let Some(h) = matches.value_of("height") { // In options
         height = h.parse().unwrap();
     }
-    else if let Some((Width(w), Height(h))) = size { // In terminal
-        width=w as u32;
+    else if let Some((Width(_w), Height(h))) = size { // In terminal
+        //width=w as u32;
         height=h as u32;
     }
     else { // Cannot get terminal size

@@ -10,15 +10,15 @@ fn main() {
         .version("0.0")
         .author("Sofiane D. <@Kugge>")
         .about("Graphic content on your tty")
-        .arg(Arg::new("picture")
-            .short('p')
-            .long("picture")
-            .about("Show a picture"))
-        .arg(Arg::new("height")
-            .short('h')
-            .long("height")
+        //.arg(Arg::new("picture")
+        //    .short('p')
+        //    .long("picture")
+        //    .about("Show a picture"))
+        .arg(Arg::new("size")
+            .short('s')
+            .long("size")
             .value_name("u32")
-            .about("Canvas height")
+            .about("Canvas size")
             .takes_value(true))
         .arg(Arg::new("FILE")
             .about("Sets the input file to use")
@@ -30,12 +30,12 @@ fn main() {
     let file: &str;
     //let width: u32;
     let height: u32;
-    let is_video: bool;
-    let is_picture: bool;
+    //let is_video: bool;
+    //let is_picture: bool;
 
     // GET CANVAS SIZE
     let size = terminal_size(); // Request term size
-    if let Some(h) = matches.value_of("height") { // In options
+    if let Some(h) = matches.value_of("size") { // In options
         height = h.parse().unwrap();
     }
     else if let Some((Width(_w), Height(h))) = size { // In terminal
@@ -55,9 +55,10 @@ fn main() {
         return
     }
 
-    is_video = matches.is_present("video");
-    is_picture = matches.is_present("picture");
+    //is_video = matches.is_present("video");
+    //is_picture = matches.is_present("picture");
 
+    /*
     if is_picture && is_video {
         println!("error: Incompatible flags --video and --picture");
         return
@@ -69,11 +70,12 @@ fn main() {
 
     // PROCESS PICTURE
     if is_picture {
-        let raw_img = graphics::load_image(file);
-        let img = raw_img.unwrap();
-        let w = img.width();
-        let h = img.height();
-        let img = graphics::resize_image(&img, w*height/h, height/2);
-        graphics::print_image(img);
-    }
+    */
+    let raw_img = graphics::load_image(file);
+    let img = raw_img.unwrap();
+    let w = img.width();
+    let h = img.height();
+    let img = graphics::resize_image(&img, w*height/h, height/2);
+    graphics::print_image(img);
 }
+

@@ -6,8 +6,9 @@ ADPlay (ASCII-Drip play): Graphic content on your terminal
 </p>
 
 ## Build
-Build bin: `cargo build --release`  
-The bin is `./target/release/adplay`
+Build bin and install dependencies: `cargo build --release`  
+Bin location: `./target/release/adplay`
+
 ## Usage
-Example: `adplay -p -h 100 img.png`  
-Get every usages with `adplay --help`
+Example: `adplay img.png`  
+Need help ? Just use `adplay --help`

@@ -45,7 +45,7 @@ pub fn load_image(path: &str) -> Result<RgbImage, ImageError> {
 
 // Resize image
 pub fn resize_image(img: &RgbImage, w: u32, h: u32) -> RgbImage {
-    return resize(img, w, h, FilterType::Lanczos3);
+    return resize(img, w, h, FilterType::Nearest);
 }
 
 // Show image

@@ -10,5 +10,17 @@ Build bin and install dependencies: `cargo build --release`
 Bin location: `./target/release/adplay`
 
 ## Usage
+```
+USAGE:
+    adplay [OPTIONS] <FILE>
+
+ARGS:
+    <FILE>    Sets the input file to use
+
+OPTIONS:
+    -h, --help          Print help information
+    -s, --size <u32>    Canvas size
+    -V, --version       Print version information
+```
 Example: `adplay img.png`  
 Need help ? Just use `adplay --help`

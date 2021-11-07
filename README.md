@@ -21,6 +21,9 @@ OPTIONS:
     -h, --help          Print help information
     -s, --size <u32>    Canvas size
     -V, --version       Print version information
+
+EXAMPLE: 
+    adplay img.png
+    adplay img.jpg -s 100
 ```
-Example: `adplay img.png`  
-Need help ? Just use `adplay --help`
+

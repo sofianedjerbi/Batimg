@@ -1,5 +1,5 @@
 # ADPlay
-ADPlay (ASCII-Drip play): Graphic content on your terminal
+ADPlay (ASCII-Drip play): Graphic content on your terminal (works better on pixel arts)
 
 <p align="center">
   <img src="./demo.png">

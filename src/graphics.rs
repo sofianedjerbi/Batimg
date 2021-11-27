@@ -146,13 +146,14 @@ pub fn process_video(file: &str, height: u32){
             .arg(file)
             .arg("-vf")
             .arg("select=eq(n\\,1)")
-            .arg("advideo.tmp.bmp")
+            .arg(".advideo.tmp.bmp")
             .output()
             .expect("Failed to execute FFmpeg process.");
         // Print frame
-        process_image(&"advideo.tmp.bmp", height);
+        process_image(&".advideo.tmp.bmp", height);
         // Check fps, and sleep if needed
-        match dpf.checked_sub(now.elapsed()) {
+        match dpf.saturating_mul(incr as u32)
+                 .checked_sub(now.elapsed()) {
             Some(duration) => sleep(duration),
             None => incr += 1. // Incr frameskip if cant keep up
         };

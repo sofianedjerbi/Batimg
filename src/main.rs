@@ -1,18 +1,26 @@
 use terminal_size::{Width, Height, terminal_size};
 use clap::{App, Arg};
+
 use std::path::Path;
 use std::cmp::min;
 
 mod graphics;
 
 
+const SUPPORTED_VIDEOS: [&str; 23] = ["gif", "avi", "mp4", "mkv", "m2v", 
+                                      "ogg", "ogv", "aac", "aax", 
+                                      "mov", "wmv", "avchd", "m4p", 
+                                      "f4v", "swf", "mkv", "yuv", "webm", 
+                                      "amv", "m4v", "3gp", "3g2", "nsv"];
+
+
 fn main() {
     // Load cli config
     let matches = App::new("Ascii DRIP")
-        .version("0.1")
+        .version("1.0")
         .author("Sofiane D. <@Kugge>")
         .about("Graphic content on your tty")
-        .arg(Arg::new("SIZE")
+        .arg(Arg::new("size")
             .short('s')
             .long("size")
             .value_name("u32")
@@ -30,16 +38,21 @@ fn main() {
     let file: &str;
     let height: u32;
     let is_video: bool;
-    let is_picture: bool;
 
     // GET CANVAS SIZE
     let size = terminal_size(); // Request term size
     if let Some(h) = matches.value_of("size") { // In options
-        height = h.parse().unwrap();
+        height = match h.parse::<u32>() {
+            Ok(num)   => num,
+            Err(_err) => {
+                eprintln!("<--size> should be an unsigned integer.");
+                std::process::exit(7);
+            }
+        };
+        println!("{}", height);
     }
     else if let Some((Width(w), Height(h))) = size { // In terminal
-        //width=w as u32;
-        height=min(h, w/2) as u32;
+        height = min(h, w/2) as u32;
     }
     else { // Cannot get terminal size
         eprintln!("Unable to get canvas size, please use <--size> option.");
@@ -54,28 +67,33 @@ fn main() {
         std::process::exit(1);
     }
 
-    //is_video = matches.is_present("video");
-    //is_picture = matches.is_present("picture");
 
     if !Path::new(file).exists() {
         eprintln!("{}: No such media.", file);
         std::process::exit(1);
     }
 
+    match file.rsplit(".").next() {
+        None      => std::process::exit(11),
+        Some(ext) => {
+            is_video = SUPPORTED_VIDEOS.contains(&ext);
+        }
+    }
+
     // PROCESS PICTURE
-    //if is_picture {
-    let raw_img = graphics::load_image(file);
-    let img = match raw_img {
-        Ok(pic) => pic,
-        Err(err) => {
-            eprintln!("There was an error reading media {}", file);
-            eprintln!("Error: {:?}", err);
-            std::process::exit(4);
-        },
-    };
-    let w = img.width();
-    let h = img.height();
-    let img = graphics::resize_image(&img, w*height/h, height/2);
-    graphics::print_image(img);
+    if !is_video {
+        let raw_img = graphics::load_image(file);
+        let img = match raw_img {
+            Ok(pic) => pic,
+            Err(_err) => {
+                eprintln!("{}: Unknown file format.", file);
+                std::process::exit(4);
+            },
+        };
+        let w = img.width();
+        let h = img.height();
+        let img = graphics::resize_image(&img, w*height/h, height/2);
+        graphics::print_image(img);
+    }
 }
 

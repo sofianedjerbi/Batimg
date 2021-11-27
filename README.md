@@ -1,5 +1,5 @@
 # ADPlay
-ADPlay (ASCII-Drip play): Graphic content on your terminal (works better on pixel arts)
+ADPlay: Pics & videos on your terminal
 
 <p align="center">
   <img src="./demo.png">
@@ -18,6 +18,7 @@ ARGS:
     <FILE>    Path to the media
 
 OPTIONS:
+    -a, --audio         Play video audio (unstable)
     -h, --help          Print help information
     -s, --size <u32>    Canvas size
     -V, --version       Print version information

@@ -1,6 +1,8 @@
 use terminal_size::{Width, Height, terminal_size};
 use clap::{App, Arg};
+use ctrlc;
 
+use std::process::Command;
 use std::path::Path;
 use std::cmp::min;
 
@@ -15,6 +17,15 @@ const SUPPORTED_VIDEOS: [&str; 23] = ["gif", "avi", "mp4", "mkv", "m2v",
 
 
 fn main() {
+
+    // Handle CTRL + C (on videos)
+    ctrlc::set_handler(move || {
+        print!("\x1b[?25h\n"); // Show cursor again
+        Command::new("clear").status().unwrap(); // Clear term
+        println!("Exiting.");
+        std::process::exit(0); // Exit process
+    }).expect("Error setting Ctrl-C handler");
+    
     // Load cli config
     let matches = App::new("Ascii DRIP")
         .version("1.0")
@@ -82,18 +93,11 @@ fn main() {
 
     // PROCESS PICTURE
     if !is_video {
-        let raw_img = graphics::load_image(file);
-        let img = match raw_img {
-            Ok(pic) => pic,
-            Err(_err) => {
-                eprintln!("{}: Unknown file format.", file);
-                std::process::exit(4);
-            },
-        };
-        let w = img.width();
-        let h = img.height();
-        let img = graphics::resize_image(&img, w*height/h, height/2);
-        graphics::print_image(img);
+        graphics::process_image(file, height);
+    }
+    // PROCESS VIDEO
+    else {
+        graphics::process_video(file, height);     
     }
 }
 

@@ -15,14 +15,14 @@ USAGE:
     adplay [OPTIONS] <FILE>
 
 ARGS:
-    <FILE>    Sets the input file to use
+    <FILE>    Path to the media
 
 OPTIONS:
     -h, --help          Print help information
     -s, --size <u32>    Canvas size
     -V, --version       Print version information
 
-EXAMPLE: 
+EXAMPLES: 
     adplay img.png
     adplay img.jpg -s 100
 ```

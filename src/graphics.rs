@@ -1,8 +1,12 @@
 /// graphics.rs - Load images and generate ascii data
-use std::process::Command;
 use std::time::{Duration, Instant};
+use std::fs::{File, remove_file};
+use std::process::Command;
 use std::thread::sleep;
+use std::io::BufReader;
 use std::str;
+
+use rodio::{Sink, Decoder, OutputStream};
 
 use image::imageops::FilterType;
 use image::imageops::resize;
@@ -80,9 +84,9 @@ pub fn process_image(file: &str, height: u32){
     print_image(img);
 }
 
-pub fn process_video(file: &str, height: u32){
+pub fn process_video(file: &str, height: u32, audio: bool){
     /*** PREPROCESSING ***/
-    // Setting default incrementation (ideal)
+    // Setting default incriementation (ideal)
     let mut incr: f64 = 1.;
     // Current frame
     let mut frame: f64 = 0.;
@@ -133,6 +137,29 @@ pub fn process_video(file: &str, height: u32){
     // Hide cursor
     print!("\x1b[?25l");
     Command::new("clear").status().unwrap(); // Clear term
+    // Using rodio to play audio
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    let sink = Sink::try_new(&stream_handle).unwrap();
+    // Extract and play audio
+    if audio {
+        Command::new("ffmpeg")
+            .arg("-y")
+            .arg("-i")
+            .arg(file)
+            .arg("-q:a")
+            .arg("0")
+            .arg("-map")
+            .arg("a")
+            .arg(".adplay.tmp.mp3")
+            .output()
+            .expect("Failed to extract audio with FFmpeg.");
+        // Deconding mp3
+        let filemp3 = BufReader::new(
+            File::open(".adplay.tmp.mp3").unwrap()
+        );
+        let source = Decoder::new(filemp3).unwrap();
+        sink.append(source);
+    }
     /*** PROCESSING ***/
     while frame < total_frames {
         let now = Instant::now();
@@ -146,11 +173,11 @@ pub fn process_video(file: &str, height: u32){
             .arg(file)
             .arg("-vf")
             .arg("select=eq(n\\,1)")
-            .arg(".advideo.tmp.bmp")
+            .arg(".adplay.tmp.bmp")
             .output()
             .expect("Failed to execute FFmpeg process.");
         // Print frame
-        process_image(&".advideo.tmp.bmp", height);
+        process_image(&".adplay.tmp.bmp", height);
         // Check fps, and sleep if needed
         match dpf.saturating_mul(incr as u32)
                  .checked_sub(now.elapsed()) {
@@ -160,6 +187,8 @@ pub fn process_video(file: &str, height: u32){
         frame += incr;
     }
     Command::new("clear").status().unwrap(); // Clear term
-    print!("\x1b[?25h");
+    print!("\x1b[?25h"); // Show cursor
+    remove_file(".adplay.tmp.bmp").ok();
+    remove_file(".adplay.tmp.mp3").ok();
 }
 

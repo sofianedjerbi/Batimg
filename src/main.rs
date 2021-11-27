@@ -3,6 +3,7 @@ use clap::{App, Arg};
 use ctrlc;
 
 use std::process::Command;
+use std::fs::remove_file;
 use std::path::Path;
 use std::cmp::min;
 
@@ -22,13 +23,15 @@ fn main() {
     ctrlc::set_handler(move || {
         print!("\x1b[?25h\n"); // Show cursor again
         Command::new("clear").status().unwrap(); // Clear term
+        remove_file(".adplay.tmp.bmp").ok(); // Remove tmp file
+        remove_file(".adplay.tmp.mp3").ok(); // Remove tmp file
         println!("Exiting.");
         std::process::exit(0); // Exit process
     }).expect("Error setting Ctrl-C handler");
     
     // Load cli config
     let matches = App::new("Ascii DRIP")
-        .version("1.0")
+        .version("1.1")
         .author("Sofiane D. <@Kugge>")
         .about("Graphic content on your tty")
         .arg(Arg::new("size")
@@ -37,6 +40,11 @@ fn main() {
             .value_name("u32")
             .about("Canvas size")
             .takes_value(true))
+        .arg(Arg::new("audio")
+            .short('a')
+            .long("audio")
+            .about("Play video audio (unstable)")
+            .takes_value(false))
         .arg(Arg::new("FILE")
             .about("Path to the media")
             .value_name("FILE")
@@ -49,6 +57,7 @@ fn main() {
     let file: &str;
     let height: u32;
     let is_video: bool;
+    let play_audio: bool = matches.is_present("audio");
 
     // GET CANVAS SIZE
     let size = terminal_size(); // Request term size
@@ -97,7 +106,7 @@ fn main() {
     }
     // PROCESS VIDEO
     else {
-        graphics::process_video(file, height);     
+        graphics::process_video(file, height, play_audio);
     }
 }
 

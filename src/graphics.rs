@@ -121,8 +121,11 @@ fn get_frame_info(file: &str) -> (f64, f64) {
         .expect("Failed to execute FFprobe process.");
     let str_fps = str::from_utf8(&ffprobe_fps.stdout)
         .unwrap()
-        .replace("\n", "");
+        .split("\n")
+        .next()
+        .unwrap();
     let raw_fps: Vec<&str> = str_fps.split("/").collect();
+    println!("{:?}", raw_fps);
     // dividende
     let fps1 = raw_fps[0].parse::<f64>().unwrap();
     // divisor

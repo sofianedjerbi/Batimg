@@ -3,7 +3,7 @@ use clap::{App, Arg};
 use ctrlc;
 
 use std::process::Command;
-use std::fs::remove_file;
+use std::fs::create_dir;
 use std::path::Path;
 use std::cmp::min;
 
@@ -18,13 +18,11 @@ const SUPPORTED_VIDEOS: [&str; 23] = ["gif", "avi", "mp4", "mkv", "m2v",
 
 
 fn main() {
-
     // Handle CTRL + C (on videos)
     ctrlc::set_handler(move || {
         print!("\x1b[?25h\n"); // Show cursor again
         Command::new("clear").status().unwrap(); // Clear term
-        remove_file(".adplay.tmp.bmp").ok(); // Remove tmp file
-        remove_file(".adplay.tmp.mp3").ok(); // Remove tmp file
+        graphics::clean_tmp_files(); // Remove tmp files
         println!("Exiting.");
         std::process::exit(0); // Exit process
     }).expect("Error setting Ctrl-C handler");
@@ -45,6 +43,11 @@ fn main() {
             .long("audio")
             .about("Play video audio (unstable)")
             .takes_value(false))
+        .arg(Arg::new("prerender")
+            .short('p')
+            .long("prerender")
+            .about("Export frames first (unstable)")
+            .takes_value(false))
         .arg(Arg::new("FILE")
             .about("Path to the media")
             .value_name("FILE")
@@ -58,6 +61,7 @@ fn main() {
     let height: u32;
     let is_video: bool;
     let play_audio: bool = matches.is_present("audio");
+    let prerender: bool = matches.is_present("prerender");
 
     // GET CANVAS SIZE
     let size = terminal_size(); // Request term size
@@ -106,7 +110,13 @@ fn main() {
     }
     // PROCESS VIDEO
     else {
-        graphics::process_video(file, height, play_audio);
+        create_dir(".adplaytmp").ok();
+        if prerender {
+            graphics::process_video_prerender(file, height, play_audio);
+        }
+        else {
+            graphics::process_video(file, height, play_audio);
+        }
     }
 }
 

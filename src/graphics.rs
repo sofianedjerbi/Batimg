@@ -1,12 +1,14 @@
 /// graphics.rs - Load images and generate ascii data
+use std::fs::{File, remove_dir_all};
 use std::time::{Duration, Instant};
-use std::fs::{File, remove_file};
 use std::process::Command;
 use std::thread::sleep;
 use std::io::BufReader;
 use std::str;
 
 use rodio::{Sink, Decoder, OutputStream};
+
+use rayon::prelude::*;
 
 use image::imageops::FilterType;
 use image::imageops::resize;
@@ -84,13 +86,8 @@ pub fn process_image(file: &str, height: u32){
     print_image(img);
 }
 
-pub fn process_video(file: &str, height: u32, audio: bool){
-    /*** PREPROCESSING ***/
-    // Setting default incriementation (ideal)
-    let mut incr: f64 = 1.;
-    // Current frame
-    let mut frame: f64 = 0.;
-    // Getting total number of frames
+// Returns (total frame number, second per frame)
+fn get_frame_info(file: &str) -> (f64, f64) {
     let raw_frames = Command::new("ffprobe")
         .arg("-v")
         .arg("error")
@@ -132,11 +129,28 @@ pub fn process_video(file: &str, height: u32, audio: bool){
     let fps2 = raw_fps[1].parse::<f64>().unwrap();
     // Second per frame
     let spf = fps2/fps1;
+    return (total_frames, spf)
+}
+
+pub fn clean_tmp_files(){
+    remove_dir_all(".adplaytmp").ok();
+}
+
+pub fn process_video(file: &str, height: u32, audio: bool){
+    /*** PREPROCESSING ***/
+    // Setting default incriementation (ideal)
+    let mut incr: f64 = 1.;
+    // Current frame
+    let mut frame: f64 = 0.;
+    // Getting total number of frames and frames per sec
+    let (total_frames, spf) = get_frame_info(file);
     // Duration per frame
     let dpf = Duration::from_secs_f64(spf);
     // Hide cursor
     print!("\x1b[?25l");
     Command::new("clear").status().unwrap(); // Clear term
+    
+    /*** AUDIO ***/
     // Using rodio to play audio
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     let sink = Sink::try_new(&stream_handle).unwrap();
@@ -150,12 +164,18 @@ pub fn process_video(file: &str, height: u32, audio: bool){
             .arg("0")
             .arg("-map")
             .arg("a")
-            .arg(".adplay.tmp.mp3")
+            .arg(".adplaytmp/tmp.mp3")
             .output()
             .expect("Failed to extract audio with FFmpeg.");
         // Deconding mp3
         let filemp3 = BufReader::new(
-            File::open(".adplay.tmp.mp3").unwrap()
+            match File::open(".adplaytmp/tmp.mp3") {
+                Ok(obj)   => obj,
+                Err(_err) => {
+                    println!("Video does not contain any audio.");
+                    std::process::exit(8);
+                }
+            }
         );
         let source = Decoder::new(filemp3).unwrap();
         sink.append(source);
@@ -171,13 +191,13 @@ pub fn process_video(file: &str, height: u32, audio: bool){
             .arg("-y")
             .arg("-i")
             .arg(file)
-            .arg("-vf")
-            .arg("select=eq(n\\,1)")
-            .arg(".adplay.tmp.bmp")
+            .arg("-frames:v")
+            .arg("1")
+            .arg(".adplaytmp/tmp.bmp")
             .output()
             .expect("Failed to execute FFmpeg process.");
         // Print frame
-        process_image(&".adplay.tmp.bmp", height);
+        process_image(&".adplaytmp/tmp.bmp", height);
         // Check fps, and sleep if needed
         match dpf.saturating_mul(incr as u32)
                  .checked_sub(now.elapsed()) {
@@ -188,7 +208,88 @@ pub fn process_video(file: &str, height: u32, audio: bool){
     }
     Command::new("clear").status().unwrap(); // Clear term
     print!("\x1b[?25h"); // Show cursor
-    remove_file(".adplay.tmp.bmp").ok();
-    remove_file(".adplay.tmp.mp3").ok();
+    clean_tmp_files();
+}
+
+pub fn process_video_prerender(file: &str, height: u32, audio: bool){
+    /*** PREPROCESSING ***/
+    // Setting default incriementation (ideal)
+    let mut incr: f64 = 1.;
+    // Current frame
+    let mut frame: f64 = 0.;
+    // Getting total number of frames and frames per sec
+    let (total_frames, spf) = get_frame_info(file);
+    // Duration per frame
+    let dpf = Duration::from_secs_f64(spf);
+    // Hide cursor
+    print!("\x1b[?25l");
+    Command::new("clear").status().unwrap(); // Clear term
+    
+    /*** PRERENDERING ***/
+    // Let the user know we're not dead
+    println!("Extracting frames... (Might take a while)");
+    // Extracting every frame (Multithreaded)
+    (0..(total_frames as u64)).into_par_iter().for_each(|i| {
+        Command::new("ffmpeg")
+            .arg("-ss")
+            .arg((spf*(i as f64)).to_string())
+            .arg("-y")
+            .arg("-i")
+            .arg(file)
+            .arg("-frames:v")
+            .arg("1")
+            .arg(format!(".adplaytmp/{}.bmp", i))
+            .output()
+            .expect("Failed to execute FFmpeg process.");
+    });
+
+    /*** AUDIO ***/
+    // Using rodio to play audio
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    let sink = Sink::try_new(&stream_handle).unwrap();
+    // Extract and play audio
+    if audio {
+        Command::new("ffmpeg")
+            .arg("-y")
+            .arg("-i")
+            .arg(file)
+            .arg("-q:a")
+            .arg("0")
+            .arg("-map")
+            .arg("a")
+            .arg(".adplaytmp/tmp.mp3")
+            .output()
+            .expect("Failed to extract audio with FFmpeg.");
+        // Deconding mp3
+        let filemp3 = BufReader::new(
+            match File::open(".adplaytmp/tmp.mp3") {
+                Ok(obj)   => obj,
+                Err(_err) => {
+                    println!("Video does not contain any audio.");
+                    std::process::exit(8);
+                }
+            }
+        );
+        let source = Decoder::new(filemp3).unwrap();
+        sink.append(source);
+    }
+    /*** PROCESSING ***/
+    while frame < total_frames {
+        let now = Instant::now();
+        // Get frame
+        print!("\x1b[2H");
+        // Print frame
+        process_image(&format!(".adplaytmp/{}.bmp", frame), height);
+        // Check fps, and sleep if needed
+        match dpf.saturating_mul(incr as u32)
+                 .checked_sub(now.elapsed()) {
+            Some(duration) => sleep(duration),
+            None => incr += 1. // Incr frameskip if cant keep up
+        };
+        frame += incr;
+    }
+    Command::new("clear").status().unwrap(); // Clear term
+    print!("\x1b[?25h"); // Show cursor
+    clean_tmp_files();
 }
 

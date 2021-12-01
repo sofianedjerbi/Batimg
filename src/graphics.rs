@@ -14,7 +14,8 @@ use image::imageops::FilterType;
 use image::imageops::resize;
 use image::ImageError;
 use image::io::Reader;
-use image::RgbImage;
+use image::RgbaImage;
+
 
 /// Print with colors (r, g, b) on the foreground
 #[macro_export]
@@ -48,23 +49,37 @@ macro_rules! printc {
     }
 }
 
+/// Print a space (empty character)
+#[macro_export]
+macro_rules! printe {
+    () => {
+    print!("\x1b[0m ")
+    }
+}
+
+
 // Load an image
-pub fn load_image(path: &str) -> Result<RgbImage, ImageError> {
+pub fn load_image(path: &str) -> Result<RgbaImage, ImageError> {
     let image = Reader::open(path)?.decode()?;
-    return Ok(image.to_rgb8());
+    return Ok(image.to_rgba8());
 }
 
 // Resize image
-pub fn resize_image(img: &RgbImage, w: u32, h: u32) -> RgbImage {
+pub fn resize_image(img: &RgbaImage, w: u32, h: u32) -> RgbaImage {
     return resize(img, w, h, FilterType::Nearest);
 }
 
 // Show image
-pub fn print_image(image: RgbImage) {
+pub fn print_image(image: RgbaImage) {
     for i in 0..image.height() {
         for j in 0..image.width() {
             let px = image.get_pixel(j, i);
-            printc!((*px)[0], (*px)[1], (*px)[2]);
+            if (*px)[3] == 0 {
+                printe!()
+            }
+            else {
+                printc!((*px)[0], (*px)[1], (*px)[2]);
+            }
         }
         print!("\x1b[0m\n");
     }

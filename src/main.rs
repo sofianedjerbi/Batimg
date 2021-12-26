@@ -102,7 +102,6 @@ fn main() {
                 std::process::exit(7);
             }
         };
-        println!("{}", height);
     }
     else if let Some((Width(w), Height(h))) = size { // In terminal
         height = min(h, w/2) as u32;

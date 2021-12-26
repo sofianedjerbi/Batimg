@@ -351,11 +351,11 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
     let dpf = Duration::from_secs_f64(spf);
     // Hide cursor
     print!("\x1b[?25l");
-    Command::new("clear").status().unwrap(); // Clear term
     
     /*** PRERENDERING ***/
     // Let the user know we're not dead
     println!("Extracting frames... (Might take a while)");
+
     // Extracting every frame (Multithreaded)
     (0..(total_frames as u64)).into_par_iter().for_each(|i| {
         Command::new("ffmpeg")
@@ -371,6 +371,8 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
             .expect("Failed to execute FFmpeg process.");
     });
 
+    Command::new("clear").status().unwrap(); // Clear term
+    
     /*** AUDIO ***/
     // Using rodio to play audio
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();

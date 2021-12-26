@@ -302,7 +302,7 @@ pub fn process_video(file: &str, height: u32, audio: bool,
                      .checked_sub(now.elapsed()) {
                 Some(duration) => {
                     sleep(duration);
-                    incr -= if incr > 1. {1.} else {0.};
+                    //incr -= if incr > 1. {1.} else {0.};
                 },
                 None => incr += 1. // Incr frameskip if cant keep up
             };
@@ -385,7 +385,7 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
                      .checked_sub(now.elapsed()) {
                 Some(duration) => {
                     sleep(duration);
-                    incr -= if incr > 1. {1.} else {0.};
+                    //incr -= if incr > 1. {1.} else {0.};
                 },
                 None => incr += 1. // Incr frameskip if cant keep up
             };

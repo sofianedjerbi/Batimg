@@ -19,12 +19,14 @@ ARGS:
     <FILE>    Path to the media
 
 OPTIONS:
+    -d, --debug         Print debug stats
     -a, --audio         Play video audio (unstable)
     -h, --help          Print help information
     -l, --loop          Loop the video 
     -s, --size <u32>    Canvas size
     -r, --resolution    Disable high resolution mode (half pixel character)
     -p, --prerender     Export frames first (unstable)
+    -t, --timesync      Disable realtime synchronization
     -V, --version       Print version information
 
 EXAMPLES: 

@@ -5,7 +5,6 @@ use terminal_size::{Width, Height, terminal_size};
 use clap::{App, Arg};
 use ctrlc;
 
-use std::process::Command;
 use std::fs::create_dir;
 use std::path::Path;
 use std::cmp::min;
@@ -23,8 +22,8 @@ const SUPPORTED_VIDEOS: [&str; 23] = ["gif", "avi", "mp4", "mkv", "m2v",
 fn main() {
     // Handle CTRL + C (on videos)
     ctrlc::set_handler(move || {
-        print!("\x1b[?25h\n"); // Show cursor again
-        Command::new("clear").status().unwrap(); // Clear term
+        print!("\x1b[?25h"); // Show cursor again
+        print!("\x1bc"); // Clear everything
         graphics::clean_tmp_files(); // Remove tmp files
         println!("Exiting.");
         std::process::exit(0); // Exit process
@@ -104,7 +103,7 @@ fn main() {
         };
     }
     else if let Some((Width(w), Height(h))) = size { // In terminal
-        height = min(h, w/2) as u32;
+        height = min(h, w) as u32;
     }
     else { // Cannot get terminal size
         eprintln!("Unable to get canvas size, please use <--size> option.");

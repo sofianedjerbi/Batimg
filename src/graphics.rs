@@ -269,7 +269,8 @@ pub fn process_video(file: &str, height: u32, audio: bool,
     let dpf = Duration::from_secs_f64(spf);
     // Hide cursor
     print!("\x1b[?25l");
-    Command::new("clear").status().unwrap(); // Clear term
+    // Save position
+    print!("\x1b[s");
     
     /*** AUDIO ***/
     // Using rodio to play audio
@@ -321,9 +322,8 @@ pub fn process_video(file: &str, height: u32, audio: bool,
         }
         // Flush
         stdout().flush().unwrap();
-        print!("\x1bc"); // Clear
+        print!("\x1b[u"); // Goto beginning
     }
-    Command::new("clear").status().unwrap(); // Clear term
     print!("\x1b[?25h"); // Show cursor
     clean_tmp_files();
 }
@@ -371,9 +371,13 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
             .expect("Failed to execute FFmpeg process.");
     });
 
+    // Remove "extracting frames"...
+
+    print!("\x1b[1F");
     // Hide cursor
     print!("\x1b[?25l");
-    Command::new("clear").status().unwrap(); // Clear term
+    // Save position
+    print!("\x1b[s");
     
     /*** AUDIO ***/
     // Using rodio to play audio
@@ -414,9 +418,8 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
         }
         // Flush
         stdout().flush().unwrap();
-        print!("\x1bc"); // Clear
+        print!("\x1b[u"); // Goto beginning
     }
-    Command::new("clear").status().unwrap(); // Clear term
     print!("\x1b[?25h"); // Show cursor
     clean_tmp_files();
 }

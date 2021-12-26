@@ -43,71 +43,73 @@ EXAMPLES:
 	<thead>
 	  <tr>
 	    <th></th>
-	    <th>**batimg**</th>
-	    <th>**catimg**</th>
+	    <th><b>batimg</b></th>
+	    <th><b>catimg</b></th>
 	  </tr>
 	</thead>
 	<tbody>
 	  <tr>
-	    <td>**creation date**</td>
+	    <td><b>creation date</b></td>
 	    <td>2021</td>
 	    <td>2013</td>
 	  </tr>
 	  <tr>
-	    <td>**language**</td>
+	    <td><b>language</b></td>
 	    <td>rust</td>
 	    <td>shell/c</td>
 	  </tr>
 	  <tr>
-	    <td>**format**</td>
-	    <td><a href="https://ffmpeg.org/ffmpeg-formats.html">[almost all](https://ffmpeg.org/ffmpeg-formats.html)</a></td>
+	    <td><b>format</b></td>
+	    <td>
+	        <a href="https://ffmpeg.org/ffmpeg-formats.html">
+	        almost all
+		</a>
+	    </td>
 	    <td>png/jpg/gif</td>
 	  </tr>
 	  <tr>
-	    <td>**dependencies**</td>
+	    <td><b>dependencies</b></td>
 	    <td>ffmpeg (videos)</td>
 	    <td>imagemagick</td>
 	  </tr>
 	  <tr>
-	    <td>**resize algorithm**</td>
+	    <td><b>resize algorithm</b></td>
 	    <td>nearest neighbor</td>
 	    <td>nearest color</td>
 	  </tr>
 	  <tr>
-	    <td>**resolution**</td>
+	    <td><b>resolution</b></td>
 	    <td>▀ / █</td>
 	    <td>▀ / ██</td>
 	  </tr>
 	  <tr>
-	    <td>**video support**</td>
+	    <td><b>video support</b></td>
 	    <td>yes</td>
 	    <td>no</td>
 	  </tr>
 	  <tr>
-	    <td>**audio support**</td>
+	    <td><b>audio support</b></td>
 	    <td>yes</td>
 	    <td>no</td>
 	  </tr>
 	  <tr>
-	    <td>**CPU usage**</td>
-	    <td>too high</td>
+	    <td><b>CPU usage</b></td>
+	    <td>medium (images) high (videos)</td>
 	    <td>medium</td>
 	  </tr>
 	  <tr>
-	    <td>**prerendering**</td>
+	    <td><b>prerendering</b></td>
 	    <td>Disabled by default</td>
 	    <td>Always enabled</td>
 	  </tr>
 	  <tr>
-	    <td>**time sync**</td>
+	    <td><b>time sync</b></td>
 	    <td>Enabled by default</td>
 	    <td>No</td>
 	  </tr>
 	</tbody>
 	</table>
 </div>
-
-### Rendering comparison
 
 <p align="center">
   <img src="./rendering.gif">

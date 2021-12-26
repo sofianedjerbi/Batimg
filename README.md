@@ -47,7 +47,8 @@ EXAMPLES:
 | **video support**    | yes                                                  | no             |
 | **audio support**    | yes                                                  | no             |
 | **CPU usage**        | too high                                             | medium         |
-| **Prerendering**     | Disabled by default                                  | Always enabled |
+| **prerendering**     | Disabled by default                                  | Always enabled |
+| **time sync**        | Enabled by default                                   | No             |
 
 ### Rendering comparison
 

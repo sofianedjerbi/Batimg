@@ -3,8 +3,8 @@
   <img src="./demo.gif">
 </p>
 
-`adplay` is a small program written in Rust, designed to be fast and compatible with every terminal.   
-It can show images/videos in almost [every format](https://ffmpeg.org/ffmpeg-formats.html).
+`batimg` is a small program written in Rust, designed to be fast and compatible with every terminal.   
+It can print images/videos in almost [every format](https://ffmpeg.org/ffmpeg-formats.html) in your terminal.
 
 ## Build
 Build bin and install dependencies: `cargo build --release`  
@@ -13,7 +13,7 @@ Bin location: `./target/release/adplay`
 ## Usage
 ```
 USAGE:
-    adplay [OPTIONS] <FILE>
+    batimg [OPTIONS] <FILE>
 
 ARGS:
     <FILE>    Path to the media
@@ -28,9 +28,9 @@ OPTIONS:
     -V, --version       Print version information
 
 EXAMPLES: 
-    adplay img.png
-    adplay img.jpg -s 100
-    adplay video.mp4 -a
-    adplay animation.gif
+    batimg img.png
+    batimg img.jpg -s 100
+    batimg video.mp4 -a
+    batimg animation.gif
 ```
 

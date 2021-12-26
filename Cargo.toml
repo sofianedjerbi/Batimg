@@ -1,6 +1,6 @@
 [package]
-name = "adplay"
-version = "1.2.0"
+name = "batimg"
+version = "1.2.1"
 edition = "2018"
 
 [dependencies]

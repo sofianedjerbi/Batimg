@@ -28,7 +28,7 @@ fn main() {
     }).expect("Error setting Ctrl-C handler");
     
     // Load cli config
-    let matches = App::new("Ascii DRIP")
+    let matches = App::new("batimg")
         .version("1.1")
         .author("Sofiane D. <@Kugge>")
         .about("Graphic content on your tty")

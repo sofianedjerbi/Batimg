@@ -46,7 +46,7 @@ fn main() {
         .arg(Arg::new("resolution")
             .short('r')
             .long("resolution")
-            .help("High resolution mode (Half pixel character)")
+            .help("Disable high resolution mode (Half pixel character)")
             .takes_value(false))
         .arg(Arg::new("prerender")
             .short('p')
@@ -67,7 +67,7 @@ fn main() {
     let is_video: bool;
     let play_audio: bool = matches.is_present("audio");
     let prerender: bool = matches.is_present("prerender");
-    let resolution: bool = matches.is_present("resolution");
+    let resolution: bool = !matches.is_present("resolution");
 
     // GET CANVAS SIZE
     let size = terminal_size(); // Request term size

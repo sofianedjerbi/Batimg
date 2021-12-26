@@ -3,6 +3,7 @@
 use std::fs::{File, remove_dir_all};
 use std::time::{Duration, Instant};
 use std::process::{Command, id};
+use std::io::{stdout, Write};
 use std::thread::sleep;
 use std::io::BufReader;
 use std::str;
@@ -198,7 +199,6 @@ fn get_frame_info(file: &str) -> (f64, f64) {
         .next()
         .unwrap();
     let raw_fps: Vec<&str> = str_fps.split("/").collect();
-    println!("{:?}", raw_fps);
     // dividende
     let fps1 = raw_fps[0].parse::<f64>().unwrap();
     // divisor
@@ -230,7 +230,7 @@ pub fn extract_audio(file: &str) -> Decoder<BufReader<File>> {
         match File::open(format!(".adplaytmp/{}.mp3", pid)) {
             Ok(obj)   => obj,
             Err(_err) => {
-                println!("Video does not contain any audio.");
+                eprintln!("Video does not contain any audio.");
                 std::process::exit(8);
             }
         }
@@ -284,7 +284,6 @@ pub fn process_video(file: &str, height: u32, audio: bool,
     /*** PROCESSING ***/
     while frame < total_frames {
         let now = Instant::now();
-        print!("\x1b[2H"); // Clear
         // Get frame
         Command::new("ffmpeg")
             .arg("-ss")
@@ -320,6 +319,9 @@ pub fn process_video(file: &str, height: u32, audio: bool,
         if debug {
             print!("Frame: {} | Frameskip: {}", frame, incr);
         }
+        // Flush
+        stdout().flush().unwrap();
+        print!("\x1bc"); // Clear
     }
     Command::new("clear").status().unwrap(); // Clear term
     print!("\x1b[?25h"); // Show cursor
@@ -349,8 +351,6 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
     let (total_frames, spf) = get_frame_info(file);
     // Duration per frame
     let dpf = Duration::from_secs_f64(spf);
-    // Hide cursor
-    print!("\x1b[?25l");
     
     /*** PRERENDERING ***/
     // Let the user know we're not dead
@@ -371,6 +371,8 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
             .expect("Failed to execute FFmpeg process.");
     });
 
+    // Hide cursor
+    print!("\x1b[?25l");
     Command::new("clear").status().unwrap(); // Clear term
     
     /*** AUDIO ***/
@@ -386,7 +388,6 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
     /*** PROCESSING ***/
     while frame < total_frames {
         let now = Instant::now();
-        print!("\x1b[2H"); // Clear
         // Print frame
         process_image(&format!(".adplaytmp/{}_{}.bmp", pid, frame), 
                       height, res);
@@ -411,6 +412,9 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
         if debug {
             print!("Frame: {} | Frameskip: {}", frame, incr);
         }
+        // Flush
+        stdout().flush().unwrap();
+        print!("\x1bc"); // Clear
     }
     Command::new("clear").status().unwrap(); // Clear term
     print!("\x1b[?25h"); // Show cursor

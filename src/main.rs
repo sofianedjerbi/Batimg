@@ -41,12 +41,17 @@ fn main() {
         .arg(Arg::new("audio")
             .short('a')
             .long("audio")
-            .help("Play video audio (unstable)")
+            .help("Play video audio")
+            .takes_value(false))
+        .arg(Arg::new("loop")
+            .short('l')
+            .long("loop")
+            .help("Loop the video")
             .takes_value(false))
         .arg(Arg::new("resolution")
             .short('r')
             .long("resolution")
-            .help("Disable high resolution mode (Half pixel character)")
+            .help("Disable high resolution mode (half pixel character)")
             .takes_value(false))
         .arg(Arg::new("prerender")
             .short('p')
@@ -65,9 +70,12 @@ fn main() {
     let file: &str;
     let height: u32;
     let is_video: bool;
+
+    // Flag variables
     let play_audio: bool = matches.is_present("audio");
     let prerender: bool = matches.is_present("prerender");
     let resolution: bool = !matches.is_present("resolution");
+    let mut loop_video: bool = matches.is_present("loop");
 
     // GET CANVAS SIZE
     let size = terminal_size(); // Request term size
@@ -97,16 +105,18 @@ fn main() {
         std::process::exit(1);
     }
 
-
+    // Check if the file exists
     if !Path::new(file).exists() {
         eprintln!("{}: No such media.", file);
         std::process::exit(1);
     }
 
+    // Check for video
     match file.rsplit(".").next() {
         None      => std::process::exit(11),
         Some(ext) => {
             is_video = SUPPORTED_VIDEOS.contains(&ext);
+            loop_video = &ext.eq("gif") ^ loop_video // If is a gif
         }
     }
 
@@ -118,11 +128,12 @@ fn main() {
     else {
         create_dir(".adplaytmp").ok();
         if prerender {
-            graphics::process_video_prerender(file, height, 
-                                              play_audio, resolution);
+            graphics::process_video_prerender(file, height, play_audio,
+                                              resolution, loop_video);
         }
         else {
-            graphics::process_video(file, height, play_audio, resolution);
+            graphics::process_video(file, height, play_audio,
+                                    resolution, loop_video);
         }
     }
 }

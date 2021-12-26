@@ -7,7 +7,7 @@ use std::thread::sleep;
 use std::io::BufReader;
 use std::str;
 
-use rodio::{Sink, Decoder, OutputStream};
+use rodio::{Source, Sink, Decoder, OutputStream};
 
 use rayon::prelude::*;
 
@@ -208,6 +208,34 @@ fn get_frame_info(file: &str) -> (f64, f64) {
     return (total_frames, spf)
 }
 
+/// Extract an audio source
+/// # Parameters
+/// - `file`: Path to the file
+pub fn extract_audio(file: &str) -> Decoder<BufReader<File>> {
+    Command::new("ffmpeg")
+        .arg("-y")
+        .arg("-i")
+        .arg(file)
+        .arg("-q:a")
+        .arg("0")
+        .arg("-map")
+        .arg("a")
+        .arg(".adplaytmp/tmp.mp3")
+        .output()
+        .expect("Failed to extract audio with FFmpeg.");
+    // Deconding mp3
+    let filemp3 = BufReader::new(
+        match File::open(".adplaytmp/tmp.mp3") {
+            Ok(obj)   => obj,
+            Err(_err) => {
+                println!("Video does not contain any audio.");
+                std::process::exit(8);
+            }
+        }
+    );
+    return Decoder::new(filemp3).unwrap();
+}
+
 /// Delete temp directory
 pub fn clean_tmp_files(){
     remove_dir_all(".adplaytmp").ok();
@@ -219,8 +247,9 @@ pub fn clean_tmp_files(){
 /// - `height`: Height of the image
 /// - `audio`: Are we playing the audio ?
 /// - `res`: Are we using the half pixel mode ?
-pub fn process_video(file: &str, height: u32, 
-                     audio: bool, res: bool){
+/// - `loop_video`: Loop the video ?
+pub fn process_video(file: &str, height: u32, audio: bool, 
+                     res: bool, loop_video: bool){
     /*** PREPROCESSING ***/
     // Setting default incriementation (ideal)
     let mut incr: f64 = 1.;
@@ -240,30 +269,10 @@ pub fn process_video(file: &str, height: u32,
     let sink = Sink::try_new(&stream_handle).unwrap();
     // Extract and play audio
     if audio {
-        Command::new("ffmpeg")
-            .arg("-y")
-            .arg("-i")
-            .arg(file)
-            .arg("-q:a")
-            .arg("0")
-            .arg("-map")
-            .arg("a")
-            .arg(".adplaytmp/tmp.mp3")
-            .output()
-            .expect("Failed to extract audio with FFmpeg.");
-        // Deconding mp3
-        let filemp3 = BufReader::new(
-            match File::open(".adplaytmp/tmp.mp3") {
-                Ok(obj)   => obj,
-                Err(_err) => {
-                    println!("Video does not contain any audio.");
-                    std::process::exit(8);
-                }
-            }
-        );
-        let source = Decoder::new(filemp3).unwrap();
-        sink.append(source);
+        let source = extract_audio(file);
+        sink.append(source.repeat_infinite());
     }
+    
     /*** PROCESSING ***/
     while frame < total_frames {
         let now = Instant::now();
@@ -289,6 +298,11 @@ pub fn process_video(file: &str, height: u32,
             None => incr += 1. // Incr frameskip if cant keep up
         };
         frame += incr;
+
+        // At the end of the media
+        if loop_video && frame >= total_frames {
+            frame = 0.0;
+        }
     }
     Command::new("clear").status().unwrap(); // Clear term
     print!("\x1b[?25h"); // Show cursor
@@ -301,8 +315,9 @@ pub fn process_video(file: &str, height: u32,
 /// - `height`: Height of the image
 /// - `audio`: Are we playing the audio ?
 /// - `res`: Are we using the half pixel mode ?
-pub fn process_video_prerender(file: &str, height: u32, 
-                               audio: bool, res: bool){
+/// - `loop_video`: Loop the video ?
+pub fn process_video_prerender(file: &str, height: u32, audio: bool, 
+                               res: bool, loop_video: bool){
     /*** PREPROCESSING ***/
     // Setting default incriementation (ideal)
     let mut incr: f64 = 1.;
@@ -340,30 +355,10 @@ pub fn process_video_prerender(file: &str, height: u32,
     let sink = Sink::try_new(&stream_handle).unwrap();
     // Extract and play audio
     if audio {
-        Command::new("ffmpeg")
-            .arg("-y")
-            .arg("-i")
-            .arg(file)
-            .arg("-q:a")
-            .arg("0")
-            .arg("-map")
-            .arg("a")
-            .arg(".adplaytmp/tmp.mp3")
-            .output()
-            .expect("Failed to extract audio with FFmpeg.");
-        // Deconding mp3
-        let filemp3 = BufReader::new(
-            match File::open(".adplaytmp/tmp.mp3") {
-                Ok(obj)   => obj,
-                Err(_err) => {
-                    println!("Video does not contain any audio.");
-                    std::process::exit(8);
-                }
-            }
-        );
-        let source = Decoder::new(filemp3).unwrap();
-        sink.append(source);
+        let source = extract_audio(file);
+        sink.append(source.repeat_infinite());
     }
+    
     /*** PROCESSING ***/
     while frame < total_frames {
         let now = Instant::now();
@@ -378,6 +373,11 @@ pub fn process_video_prerender(file: &str, height: u32,
             None => incr += 1. // Incr frameskip if cant keep up
         };
         frame += incr;
+        
+        // At the end of the media
+        if loop_video && frame >= total_frames {
+            frame = 0.0;
+        }
     }
     Command::new("clear").status().unwrap(); // Clear term
     print!("\x1b[?25h"); // Show cursor

@@ -115,3 +115,7 @@ EXAMPLES:
   <img src="./rendering.gif">
 </p>
 
+<p align="center">
+batimg (left) vs catimg (right) on pixel arts
+</p>
+

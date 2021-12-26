@@ -1,3 +1,6 @@
+// Uses the api provided in graphics.rs
+// To build a cli tool that get images
+// Author: Sofiane DJERBI (@Kugge)
 use terminal_size::{Width, Height, terminal_size};
 use clap::{App, Arg};
 use ctrlc;

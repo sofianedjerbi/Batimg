@@ -1,7 +1,4 @@
 # ADPlay
-ADPlay: Pics & videos on your terminal  
-(FFmpeg required for videos/gifs)
-
 <p align="center">
   <img src="./demo.gif">
 </p>
@@ -30,5 +27,7 @@ OPTIONS:
 EXAMPLES: 
     adplay img.png
     adplay img.jpg -s 100
+    adplay video.mp4 -a
+    adplay animation.gif
 ```
 

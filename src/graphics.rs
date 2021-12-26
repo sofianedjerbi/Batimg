@@ -251,8 +251,11 @@ pub fn clean_tmp_files(){
 /// - `audio`: Are we playing the audio ?
 /// - `res`: Are we using the half pixel mode ?
 /// - `loop_video`: Loop the video ?
+/// - `sync`: Activate realtime syncing ?
+/// - `debug`: Print debug info ?
 pub fn process_video(file: &str, height: u32, audio: bool, 
-                     res: bool, loop_video: bool, sync: bool) {
+                     res: bool, loop_video: bool, sync: bool,
+                     debug: bool) {
     // Get process id
     let pid = id();
     /*** PREPROCESSING ***/
@@ -281,8 +284,8 @@ pub fn process_video(file: &str, height: u32, audio: bool,
     /*** PROCESSING ***/
     while frame < total_frames {
         let now = Instant::now();
+        print!("\x1b[2H"); // Clear
         // Get frame
-        print!("\x1b[2H");
         Command::new("ffmpeg")
             .arg("-ss")
             .arg((spf*frame).to_string())
@@ -313,6 +316,10 @@ pub fn process_video(file: &str, height: u32, audio: bool,
         if loop_video && frame >= total_frames {
             frame = 0.;
         }
+        // Debug info
+        if debug {
+            print!("Frame: {} | Frameskip: {}", frame, incr);
+        }
     }
     Command::new("clear").status().unwrap(); // Clear term
     print!("\x1b[?25h"); // Show cursor
@@ -326,8 +333,11 @@ pub fn process_video(file: &str, height: u32, audio: bool,
 /// - `audio`: Are we playing the audio ?
 /// - `res`: Are we using the half pixel mode ?
 /// - `loop_video`: Loop the video ?
+/// - `sync`: Activate realtime syncing ?
+/// - `debug`: Print debug info ?
 pub fn process_video_prerender(file: &str, height: u32, audio: bool, 
-                               res: bool, loop_video: bool, sync: bool){
+                               res: bool, loop_video: bool, sync: bool,
+                               debug: bool){
     // Get process id
     let pid = id();
     /*** PREPROCESSING ***/
@@ -374,8 +384,7 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
     /*** PROCESSING ***/
     while frame < total_frames {
         let now = Instant::now();
-        // Get frame
-        print!("\x1b[2H");
+        print!("\x1b[2H"); // Clear
         // Print frame
         process_image(&format!(".adplaytmp/{}_{}.bmp", pid, frame), 
                       height, res);
@@ -395,6 +404,10 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
         // At the end of the media
         if loop_video && frame >= total_frames {
             frame = 0.;
+        }
+        // Debug info
+        if debug {
+            print!("Frame: {} | Frameskip: {}", frame, incr);
         }
     }
     Command::new("clear").status().unwrap(); // Clear term

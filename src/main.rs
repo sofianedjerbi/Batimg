@@ -43,6 +43,11 @@ fn main() {
             .long("timesync")
             .help("Disable realtime synchronization")
             .takes_value(false))
+        .arg(Arg::new("debug")
+            .short('d')
+            .long("debug")
+            .help("Print debug stats")
+            .takes_value(false))
         .arg(Arg::new("audio")
             .short('a')
             .long("audio")
@@ -77,6 +82,7 @@ fn main() {
     let is_video: bool;
 
     // Flag variables
+    let debug: bool = matches.is_present("debug");
     let play_audio: bool = matches.is_present("audio");
     let timesync: bool = matches.is_present("timesync");
     let prerender: bool = matches.is_present("prerender");
@@ -136,12 +142,12 @@ fn main() {
         if prerender {
             graphics::process_video_prerender(file, height, play_audio,
                                               resolution, loop_video,
-                                              !timesync);
+                                              !timesync, debug);
         }
         else {
             graphics::process_video(file, height, play_audio,
                                     resolution, loop_video,
-                                    !timesync);
+                                    !timesync, debug);
         }
     }
 }

@@ -38,6 +38,7 @@ EXAMPLES:
 
 |                      | **batimg**                                           | **catimg**     |
 |----------------------|------------------------------------------------------|----------------|
+| **creation date**    | 2021                                                 | 2013           |
 | **language**         | rust                                                 | shell/c        |
 | **format**           | [almost all](https://ffmpeg.org/ffmpeg-formats.html) | png/jpg/gif    |
 | **dependencies**     | ffmpeg (videos)                                      | imagemagick    |

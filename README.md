@@ -3,6 +3,8 @@
   <img src="./demo.gif">
 </p>
 
+`adplay` is a small program written in Rust, designed to be fast and compatible with every terminal. It can show images/videos in almost every format.
+
 ## Build
 Build bin and install dependencies: `cargo build --release`  
 Bin location: `./target/release/adplay`

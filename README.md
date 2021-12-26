@@ -34,3 +34,21 @@ EXAMPLES:
     batimg animation.gif
 ```
 
+## batimg vs catimg
+
+|                      | **batimg**                                           | **catimg**     |
+|----------------------|------------------------------------------------------|----------------|
+| **language**         | rust                                                 | shell/c        |
+| **format**           | [almost all](https://ffmpeg.org/ffmpeg-formats.html) | png/jpg/gif    |
+| **dependencies**     | ffmpeg (videos)                                      | imagemagick    |
+| **resize algorithm** | nearest neighbor                                     | nearest color  |
+| **resolution**       | ▀ / █                                                | ▀ / ██         |
+| **video support**    | yes                                                  | no             |
+| **audio support**    | yes                                                  | no             |
+| **CPU usage**        | too high                                             | medium         |
+| **Prerendering**     | Disabled by default                                  | Always enabled |
+
+### Rendering comparison
+
+![Rendering comparison](rendering.gif)
+

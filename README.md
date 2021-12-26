@@ -54,5 +54,7 @@ EXAMPLES:
 
 ### Rendering comparison
 
-![Rendering comparison](rendering.gif)
+<p align="center">
+  <img src="./rendering.gif">
+</p>
 

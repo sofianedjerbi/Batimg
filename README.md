@@ -38,19 +38,74 @@ EXAMPLES:
 
 ## batimg vs catimg
 
-|                      | **batimg**                                           | **catimg**     |
-|----------------------|------------------------------------------------------|----------------|
-| **creation date**    | 2021                                                 | 2013           |
-| **language**         | rust                                                 | shell/c        |
-| **format**           | [almost all](https://ffmpeg.org/ffmpeg-formats.html) | png/jpg/gif    |
-| **dependencies**     | ffmpeg (videos)                                      | imagemagick    |
-| **resize algorithm** | nearest neighbor                                     | nearest color  |
-| **resolution**       | ▀ / █                                                | ▀ / ██         |
-| **video support**    | yes                                                  | no             |
-| **audio support**    | yes                                                  | no             |
-| **CPU usage**        | too high                                             | medium         |
-| **prerendering**     | Disabled by default                                  | Always enabled |
-| **time sync**        | Enabled by default                                   | No             |
+<div align="center">
+	<table>
+	<thead>
+	  <tr>
+	    <th></th>
+	    <th>**batimg**</th>
+	    <th>**catimg**</th>
+	  </tr>
+	</thead>
+	<tbody>
+	  <tr>
+	    <td>**creation date**</td>
+	    <td>2021</td>
+	    <td>2013</td>
+	  </tr>
+	  <tr>
+	    <td>**language**</td>
+	    <td>rust</td>
+	    <td>shell/c</td>
+	  </tr>
+	  <tr>
+	    <td>**format**</td>
+	    <td><a href="https://ffmpeg.org/ffmpeg-formats.html">[almost all](https://ffmpeg.org/ffmpeg-formats.html)</a></td>
+	    <td>png/jpg/gif</td>
+	  </tr>
+	  <tr>
+	    <td>**dependencies**</td>
+	    <td>ffmpeg (videos)</td>
+	    <td>imagemagick</td>
+	  </tr>
+	  <tr>
+	    <td>**resize algorithm**</td>
+	    <td>nearest neighbor</td>
+	    <td>nearest color</td>
+	  </tr>
+	  <tr>
+	    <td>**resolution**</td>
+	    <td>▀ / █</td>
+	    <td>▀ / ██</td>
+	  </tr>
+	  <tr>
+	    <td>**video support**</td>
+	    <td>yes</td>
+	    <td>no</td>
+	  </tr>
+	  <tr>
+	    <td>**audio support**</td>
+	    <td>yes</td>
+	    <td>no</td>
+	  </tr>
+	  <tr>
+	    <td>**CPU usage**</td>
+	    <td>too high</td>
+	    <td>medium</td>
+	  </tr>
+	  <tr>
+	    <td>**prerendering**</td>
+	    <td>Disabled by default</td>
+	    <td>Always enabled</td>
+	  </tr>
+	  <tr>
+	    <td>**time sync**</td>
+	    <td>Enabled by default</td>
+	    <td>No</td>
+	  </tr>
+	</tbody>
+	</table>
+</div>
 
 ### Rendering comparison
 

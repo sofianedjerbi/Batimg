@@ -116,6 +116,6 @@ EXAMPLES:
 </p>
 
 <p align="center">
-batimg (left) vs catimg (right) on pixel arts
+Rendering comparison on pixel arts.
 </p>
 

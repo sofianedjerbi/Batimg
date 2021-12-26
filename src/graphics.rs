@@ -1,4 +1,5 @@
 /// graphics.rs - Load images and generate ascii data
+/// Author: Sofiane DJERBI (@Kugge)
 use std::fs::{File, remove_dir_all};
 use std::time::{Duration, Instant};
 use std::process::Command;
@@ -49,6 +50,17 @@ macro_rules! printc {
     }
 }
 
+/// Half-pixel resolution: Print two pixels (fg/bg)
+#[macro_export]
+macro_rules! printhp {
+     ($rf: expr, $gf: expr, $bf: expr,
+      $rb: expr, $gb: expr, $bb: expr) => {
+        print!("\x1b[38;2;{};{};{}m\x1b[48;2;{};{};{}m▀", 
+               $rf, $gf, $bf, $rb, $gb, $bb)
+    }
+}
+
+
 /// Print a space (empty character)
 #[macro_export]
 macro_rules! printe {
@@ -74,7 +86,7 @@ pub fn print_image(image: RgbaImage) {
     for i in 0..image.height() {
         for j in 0..image.width() {
             let px = image.get_pixel(j, i);
-            if (*px)[3] == 0 {
+            if (*px)[3] == 0 { // Transparent
                 printe!()
             }
             else {
@@ -85,8 +97,32 @@ pub fn print_image(image: RgbaImage) {
     }
 }
 
+// Show image: Half pixel mode
+pub fn print_image_hpm(image: RgbaImage) {
+    for i in (0..image.height()-1).step_by(2) {
+        for j in 0..image.width() {
+            let pxu = image.get_pixel(j, i);   // Upper pixel
+            let pxl = image.get_pixel(j, i+1); // Lower pixel
+            if (*pxu)[3] == 0 && (*pxl)[3] == 0 { // Both transparent
+                printe!()
+            }
+            if (*pxu)[3] == 0 { // Upper transparent
+                printcf!("▄", (*pxl)[0], (*pxl)[1], (*pxl)[2]);
+            }
+            else if (*pxl)[3] == 0 { // Lower transparent
+                printcf!("▀", (*pxu)[0], (*pxu)[1], (*pxu)[2]);
+            }
+            else {
+                printhp!((*pxu)[0], (*pxu)[1], (*pxu)[2],
+                         (*pxl)[0], (*pxl)[1], (*pxl)[2]);
+            }
+        }
+        print!("\x1b[0m\n");
+    }
+}
+
 // Process and print an image
-pub fn process_image(file: &str, height: u32){
+pub fn process_image(file: &str, height: u32, res: bool){
     let raw_img = load_image(file);
     let img = match raw_img {
         Ok(pic) => pic,
@@ -97,8 +133,14 @@ pub fn process_image(file: &str, height: u32){
     };
     let w = img.width();
     let h = img.height();
-    let img = resize_image(&img, w*height/h, height/2);
-    print_image(img);
+    if res {
+        let img = resize_image(&img, w*height/h, height);
+        print_image_hpm(img);
+    } 
+    else {
+        let img = resize_image(&img, w*height/h, height/2);
+        print_image(img);
+    }
 }
 
 // Returns (total frame number, second per frame)
@@ -150,11 +192,14 @@ fn get_frame_info(file: &str) -> (f64, f64) {
     return (total_frames, spf)
 }
 
+// Delete temp directory
 pub fn clean_tmp_files(){
     remove_dir_all(".adplaytmp").ok();
 }
 
-pub fn process_video(file: &str, height: u32, audio: bool){
+// Print a video using ffmpeg
+pub fn process_video(file: &str, height: u32, 
+                     audio: bool, res: bool){
     /*** PREPROCESSING ***/
     // Setting default incriementation (ideal)
     let mut incr: f64 = 1.;
@@ -215,7 +260,7 @@ pub fn process_video(file: &str, height: u32, audio: bool){
             .output()
             .expect("Failed to execute FFmpeg process.");
         // Print frame
-        process_image(&".adplaytmp/tmp.bmp", height);
+        process_image(&".adplaytmp/tmp.bmp", height, res);
         // Check fps, and sleep if needed
         match dpf.saturating_mul(incr as u32)
                  .checked_sub(now.elapsed()) {
@@ -229,7 +274,9 @@ pub fn process_video(file: &str, height: u32, audio: bool){
     clean_tmp_files();
 }
 
-pub fn process_video_prerender(file: &str, height: u32, audio: bool){
+// Print a video but prerender every frame before
+pub fn process_video_prerender(file: &str, height: u32, 
+                               audio: bool, res: bool){
     /*** PREPROCESSING ***/
     // Setting default incriementation (ideal)
     let mut incr: f64 = 1.;
@@ -297,7 +344,7 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool){
         // Get frame
         print!("\x1b[2H");
         // Print frame
-        process_image(&format!(".adplaytmp/{}.bmp", frame), height);
+        process_image(&format!(".adplaytmp/{}.bmp", frame), height, res);
         // Check fps, and sleep if needed
         match dpf.saturating_mul(incr as u32)
                  .checked_sub(now.elapsed()) {

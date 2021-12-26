@@ -34,19 +34,24 @@ fn main() {
         .about("Graphic content on your tty")
         .arg(Arg::new("size")
             .short('s')
-            .help("Canvas size")
             .long("size")
+            .help("Canvas size")
             .value_name("u32")
             .takes_value(true))
         .arg(Arg::new("audio")
             .short('a')
-            .help("Play video audio (unstable)")
             .long("audio")
+            .help("Play video audio (unstable)")
+            .takes_value(false))
+        .arg(Arg::new("resolution")
+            .short('r')
+            .long("resolution")
+            .help("High resolution mode (Half pixel character)")
             .takes_value(false))
         .arg(Arg::new("prerender")
             .short('p')
-            .help("Export frames first (unstable)")
             .long("prerender")
+            .help("Export frames first (unstable)")
             .takes_value(false))
         .arg(Arg::new("FILE")
             .help("Path to the media")
@@ -62,6 +67,7 @@ fn main() {
     let is_video: bool;
     let play_audio: bool = matches.is_present("audio");
     let prerender: bool = matches.is_present("prerender");
+    let resolution: bool = matches.is_present("resolution");
 
     // GET CANVAS SIZE
     let size = terminal_size(); // Request term size
@@ -106,16 +112,17 @@ fn main() {
 
     // PROCESS PICTURE
     if !is_video {
-        graphics::process_image(file, height);
+        graphics::process_image(file, height, resolution);
     }
     // PROCESS VIDEO
     else {
         create_dir(".adplaytmp").ok();
         if prerender {
-            graphics::process_video_prerender(file, height, play_audio);
+            graphics::process_video_prerender(file, height, 
+                                              play_audio, resolution);
         }
         else {
-            graphics::process_video(file, height, play_audio);
+            graphics::process_video(file, height, play_audio, resolution);
         }
     }
 }

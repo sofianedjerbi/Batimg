@@ -2,7 +2,7 @@
 /// Author: Sofiane DJERBI (@Kugge)
 use std::fs::{File, remove_dir_all};
 use std::time::{Duration, Instant};
-use std::process::Command;
+use std::process::{Command, id};
 use std::thread::sleep;
 use std::io::BufReader;
 use std::str;
@@ -212,6 +212,8 @@ fn get_frame_info(file: &str) -> (f64, f64) {
 /// # Parameters
 /// - `file`: Path to the file
 pub fn extract_audio(file: &str) -> Decoder<BufReader<File>> {
+    // Get process id
+    let pid = id();
     Command::new("ffmpeg")
         .arg("-y")
         .arg("-i")
@@ -220,12 +222,12 @@ pub fn extract_audio(file: &str) -> Decoder<BufReader<File>> {
         .arg("0")
         .arg("-map")
         .arg("a")
-        .arg(".adplaytmp/tmp.mp3")
+        .arg(format!(".adplaytmp/{}.mp3", pid))
         .output()
         .expect("Failed to extract audio with FFmpeg.");
     // Deconding mp3
     let filemp3 = BufReader::new(
-        match File::open(".adplaytmp/tmp.mp3") {
+        match File::open(format!(".adplaytmp/{}.mp3", pid)) {
             Ok(obj)   => obj,
             Err(_err) => {
                 println!("Video does not contain any audio.");
@@ -238,6 +240,7 @@ pub fn extract_audio(file: &str) -> Decoder<BufReader<File>> {
 
 /// Delete temp directory
 pub fn clean_tmp_files(){
+    
     remove_dir_all(".adplaytmp").ok();
 }
 
@@ -249,7 +252,9 @@ pub fn clean_tmp_files(){
 /// - `res`: Are we using the half pixel mode ?
 /// - `loop_video`: Loop the video ?
 pub fn process_video(file: &str, height: u32, audio: bool, 
-                     res: bool, loop_video: bool){
+                     res: bool, loop_video: bool, sync: bool) {
+    // Get process id
+    let pid = id();
     /*** PREPROCESSING ***/
     // Setting default incriementation (ideal)
     let mut incr: f64 = 1.;
@@ -286,22 +291,24 @@ pub fn process_video(file: &str, height: u32, audio: bool,
             .arg(file)
             .arg("-frames:v")
             .arg("1")
-            .arg(".adplaytmp/tmp.bmp")
+            .arg(format!(".adplaytmp/{}.bmp", pid))
             .output()
             .expect("Failed to execute FFmpeg process.");
         // Print frame
-        process_image(&".adplaytmp/tmp.bmp", height, res);
+        process_image(&format!(".adplaytmp/{}.bmp", pid), height, res);
         // Check fps, and sleep if needed
-        match dpf.saturating_mul(incr as u32)
-                 .checked_sub(now.elapsed()) {
-            Some(duration) => sleep(duration),
-            None => incr += 1. // Incr frameskip if cant keep up
-        };
+        if sync {
+            match dpf.saturating_mul(incr as u32)
+                     .checked_sub(now.elapsed()) {
+                Some(duration) => sleep(duration),
+                None => incr += 1. // Incr frameskip if cant keep up
+            };
+        }
         frame += incr;
 
         // At the end of the media
         if loop_video && frame >= total_frames {
-            frame = 0.0;
+            frame = 0.;
         }
     }
     Command::new("clear").status().unwrap(); // Clear term
@@ -317,7 +324,9 @@ pub fn process_video(file: &str, height: u32, audio: bool,
 /// - `res`: Are we using the half pixel mode ?
 /// - `loop_video`: Loop the video ?
 pub fn process_video_prerender(file: &str, height: u32, audio: bool, 
-                               res: bool, loop_video: bool){
+                               res: bool, loop_video: bool, sync: bool){
+    // Get process id
+    let pid = id();
     /*** PREPROCESSING ***/
     // Setting default incriementation (ideal)
     let mut incr: f64 = 1.;
@@ -344,7 +353,7 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
             .arg(file)
             .arg("-frames:v")
             .arg("1")
-            .arg(format!(".adplaytmp/{}.bmp", i))
+            .arg(format!(".adplaytmp/{}_{}.bmp", pid, i))
             .output()
             .expect("Failed to execute FFmpeg process.");
     });
@@ -365,18 +374,21 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
         // Get frame
         print!("\x1b[2H");
         // Print frame
-        process_image(&format!(".adplaytmp/{}.bmp", frame), height, res);
+        process_image(&format!(".adplaytmp/{}_{}.bmp", pid, frame), 
+                      height, res);
         // Check fps, and sleep if needed
-        match dpf.saturating_mul(incr as u32)
-                 .checked_sub(now.elapsed()) {
-            Some(duration) => sleep(duration),
-            None => incr += 1. // Incr frameskip if cant keep up
-        };
+        if sync {
+            match dpf.saturating_mul(incr as u32)
+                     .checked_sub(now.elapsed()) {
+                Some(duration) => sleep(duration),
+                None => incr += 1. // Incr frameskip if cant keep up
+            };
+        }
         frame += incr;
         
         // At the end of the media
         if loop_video && frame >= total_frames {
-            frame = 0.0;
+            frame = 0.;
         }
     }
     Command::new("clear").status().unwrap(); // Clear term

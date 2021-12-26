@@ -50,7 +50,7 @@ macro_rules! printc {
     }
 }
 
-/// Half-pixel resolution: Print two pixels (fg/bg)
+/// Half-pixel resolution: Print two pixels r, g, b(f/b)
 #[macro_export]
 macro_rules! printhp {
      ($rf: expr, $gf: expr, $bf: expr,
@@ -70,18 +70,24 @@ macro_rules! printe {
 }
 
 
-// Load an image
+/// Load an image
+/// # Parameters
+/// - `path`: Path to the image
 pub fn load_image(path: &str) -> Result<RgbaImage, ImageError> {
     let image = Reader::open(path)?.decode()?;
     return Ok(image.to_rgba8());
 }
 
-// Resize image
-pub fn resize_image(img: &RgbaImage, w: u32, h: u32) -> RgbaImage {
-    return resize(img, w, h, FilterType::Nearest);
+/// Resize an image
+/// # Parameters
+/// - `image`: RGBA image object
+pub fn resize_image(image: &RgbaImage, w: u32, h: u32) -> RgbaImage {
+    return resize(image, w, h, FilterType::Nearest);
 }
 
-// Show image
+/// Show an image
+/// # Parameters
+/// - `image`: RGBA image object
 pub fn print_image(image: RgbaImage) {
     for i in 0..image.height() {
         for j in 0..image.width() {
@@ -97,7 +103,9 @@ pub fn print_image(image: RgbaImage) {
     }
 }
 
-// Show image: Half pixel mode
+/// Show an image: Half pixel mode
+/// # Parameters
+/// - `image`: RGBA image object
 pub fn print_image_hpm(image: RgbaImage) {
     for i in (0..image.height()-1).step_by(2) {
         for j in 0..image.width() {
@@ -121,7 +129,11 @@ pub fn print_image_hpm(image: RgbaImage) {
     }
 }
 
-// Process and print an image
+/// Process and print an image
+/// # Parameters:
+/// - `file`: Path to the image
+/// - `height`: Height of the image
+/// - `res`: Are we using the half pixel mode ?
 pub fn process_image(file: &str, height: u32, res: bool){
     let raw_img = load_image(file);
     let img = match raw_img {
@@ -143,7 +155,11 @@ pub fn process_image(file: &str, height: u32, res: bool){
     }
 }
 
-// Returns (total frame number, second per frame)
+/// Get SPF and total frame number of a video
+/// # Parameters
+/// - `file`: File path
+/// # Returns 
+/// A tuple (total frame number, second per frame)
 fn get_frame_info(file: &str) -> (f64, f64) {
     let raw_frames = Command::new("ffprobe")
         .arg("-v")
@@ -192,12 +208,17 @@ fn get_frame_info(file: &str) -> (f64, f64) {
     return (total_frames, spf)
 }
 
-// Delete temp directory
+/// Delete temp directory
 pub fn clean_tmp_files(){
     remove_dir_all(".adplaytmp").ok();
 }
 
-// Print a video using ffmpeg
+/// Print a video using ffmpeg
+/// # Parameters
+/// - `file`: Path to the image
+/// - `height`: Height of the image
+/// - `audio`: Are we playing the audio ?
+/// - `res`: Are we using the half pixel mode ?
 pub fn process_video(file: &str, height: u32, 
                      audio: bool, res: bool){
     /*** PREPROCESSING ***/
@@ -274,7 +295,12 @@ pub fn process_video(file: &str, height: u32,
     clean_tmp_files();
 }
 
-// Print a video but prerender every frame before
+/// Print a video but prerender every frame before
+/// # Parameters
+/// - `file`: Path to the image
+/// - `height`: Height of the image
+/// - `audio`: Are we playing the audio ?
+/// - `res`: Are we using the half pixel mode ?
 pub fn process_video_prerender(file: &str, height: u32, 
                                audio: bool, res: bool){
     /*** PREPROCESSING ***/

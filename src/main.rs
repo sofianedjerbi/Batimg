@@ -38,6 +38,11 @@ fn main() {
             .help("Canvas size")
             .value_name("u32")
             .takes_value(true))
+        .arg(Arg::new("timesync")
+            .short('t')
+            .long("timesync")
+            .help("Disable realtime synchronization")
+            .takes_value(false))
         .arg(Arg::new("audio")
             .short('a')
             .long("audio")
@@ -73,6 +78,7 @@ fn main() {
 
     // Flag variables
     let play_audio: bool = matches.is_present("audio");
+    let timesync: bool = matches.is_present("timesync");
     let prerender: bool = matches.is_present("prerender");
     let resolution: bool = !matches.is_present("resolution");
     let mut loop_video: bool = matches.is_present("loop");
@@ -129,11 +135,13 @@ fn main() {
         create_dir(".adplaytmp").ok();
         if prerender {
             graphics::process_video_prerender(file, height, play_audio,
-                                              resolution, loop_video);
+                                              resolution, loop_video,
+                                              !timesync);
         }
         else {
             graphics::process_video(file, height, play_audio,
-                                    resolution, loop_video);
+                                    resolution, loop_video,
+                                    !timesync);
         }
     }
 }

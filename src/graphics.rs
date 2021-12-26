@@ -300,7 +300,10 @@ pub fn process_video(file: &str, height: u32, audio: bool,
         if sync {
             match dpf.saturating_mul(incr as u32)
                      .checked_sub(now.elapsed()) {
-                Some(duration) => sleep(duration),
+                Some(duration) => {
+                    sleep(duration);
+                    incr -= if incr > 1. {1.} else {0.};
+                },
                 None => incr += 1. // Incr frameskip if cant keep up
             };
         }
@@ -380,7 +383,10 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
         if sync {
             match dpf.saturating_mul(incr as u32)
                      .checked_sub(now.elapsed()) {
-                Some(duration) => sleep(duration),
+                Some(duration) => {
+                    sleep(duration);
+                    incr -= if incr > 1. {1.} else {0.};
+                },
                 None => incr += 1. // Incr frameskip if cant keep up
             };
         }

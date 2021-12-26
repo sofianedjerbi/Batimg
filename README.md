@@ -105,7 +105,7 @@ EXAMPLES:
 	  <tr>
 	    <td><b>time sync</b></td>
 	    <td>Enabled by default</td>
-	    <td>No</td>
+	    <td>Seems unabled, but not on every gif</td>
 	  </tr>
 	</tbody>
 	</table>

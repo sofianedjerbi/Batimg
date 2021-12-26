@@ -1,9 +1,9 @@
 # ADPlay
 ADPlay: Pics & videos on your terminal  
-(FFmpeg required for videos)
+(FFmpeg required for videos/gifs)
 
 <p align="center">
-  <img src="./demo.png">
+  <img src="./demo.gif">
 </p>
 
 ## Build

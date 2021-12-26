@@ -22,6 +22,7 @@ OPTIONS:
     -a, --audio         Play video audio (unstable)
     -h, --help          Print help information
     -s, --size <u32>    Canvas size
+    -r, --resolution    Disable high resolution mode (Half pixel character)
     -p, --prerender     Export frames first (unstable)
     -V, --version       Print version information
 

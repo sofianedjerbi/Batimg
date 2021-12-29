@@ -35,7 +35,7 @@ EXAMPLES:
     batimg video.mp4 -a
     batimg animation.gif
 ```
-## Roadmap
+## Goals
 
 - [x] Show images
 - [x] Show videos

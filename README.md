@@ -35,6 +35,14 @@ EXAMPLES:
     batimg video.mp4 -a
     batimg animation.gif
 ```
+## Roadmap
+
+- [x] Show images
+- [x] Show videos
+- [x] Play audio
+- [ ] Improving the resolution
+- [ ] Improving cleaning escape codes
+- [ ] Getting rid of FFmpeg high CPU usage 
 
 ## batimg vs catimg
 

@@ -38,11 +38,11 @@ EXAMPLES:
 ## Goals
 
 - [x] Show images
-- [x] Show videos
+- [x] Play videos
 - [x] Play audio
 - [ ] Improving the resolution
 - [ ] Improving cleaning escape codes
-- [ ] Getting rid of FFmpeg high CPU usage 
+- [ ] Getting rid of FFmpeg high CPU usage (Frame extraction)
 
 ## batimg vs catimg
 

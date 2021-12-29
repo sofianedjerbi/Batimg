@@ -240,7 +240,6 @@ pub fn extract_audio(file: &str) -> Decoder<BufReader<File>> {
 
 /// Delete temp directory
 pub fn clean_tmp_files(){
-
     remove_dir_all(".adplaytmp").ok();
 }
 
@@ -360,7 +359,7 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
         Command::new("ffmpeg")
             .arg("-ss")
             .arg((spf*(i as f64)).to_string())
-            .arg("-y")
+            //.arg("-y")
             .arg("-i")
             .arg(file)
             .arg("-frames:v")
@@ -371,7 +370,7 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
     });
 
     // Remove "extracting frames"...
-    print!("\x1b[1F");
+    print!("\x1b[1F\x1b[0K");
     // Hide cursor
     print!("\x1b[?25l");
 

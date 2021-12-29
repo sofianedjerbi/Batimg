@@ -56,7 +56,7 @@ macro_rules! printc {
 macro_rules! printhp {
      ($rf: expr, $gf: expr, $bf: expr,
       $rb: expr, $gb: expr, $bb: expr) => {
-        print!("\x1b[38;2;{};{};{}m\x1b[48;2;{};{};{}m▀", 
+        print!("\x1b[38;2;{};{};{}m\x1b[48;2;{};{};{}m▀",
                $rf, $gf, $bf, $rb, $gb, $bb)
     }
 }
@@ -149,9 +149,8 @@ pub fn process_image(file: &str, height: u32, res: bool){
     if res {
         let img = resize_image(&img, 2*w*height/h, 2*height);
         print_image_hpm(img);
-    } 
+    }
     else {
-        println!("{}", height);
         let img = resize_image(&img, 2*w*height/h, height);
         print_image(img);
     }
@@ -160,7 +159,7 @@ pub fn process_image(file: &str, height: u32, res: bool){
 /// Get SPF and total frame number of a video
 /// # Parameters
 /// - `file`: File path
-/// # Returns 
+/// # Returns
 /// A tuple (total frame number, second per frame)
 fn get_frame_info(file: &str) -> (f64, f64) {
     let raw_frames = Command::new("ffprobe")
@@ -241,7 +240,7 @@ pub fn extract_audio(file: &str) -> Decoder<BufReader<File>> {
 
 /// Delete temp directory
 pub fn clean_tmp_files(){
-    
+
     remove_dir_all(".adplaytmp").ok();
 }
 
@@ -254,7 +253,7 @@ pub fn clean_tmp_files(){
 /// - `loop_video`: Loop the video ?
 /// - `sync`: Activate realtime syncing ?
 /// - `debug`: Print debug info ?
-pub fn process_video(file: &str, height: u32, audio: bool, 
+pub fn process_video(file: &str, height: u32, audio: bool,
                      res: bool, loop_video: bool, sync: bool,
                      debug: bool) {
     // Get process id
@@ -270,7 +269,7 @@ pub fn process_video(file: &str, height: u32, audio: bool,
     let dpf = Duration::from_secs_f64(spf);
     // Hide cursor
     print!("\x1b[?25l");
-    
+
     /*** AUDIO ***/
     // Using rodio to play audio
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
@@ -280,7 +279,7 @@ pub fn process_video(file: &str, height: u32, audio: bool,
         let source = extract_audio(file);
         sink.append(source.repeat_infinite());
     }
-    
+
     /*** PROCESSING ***/
     while frame < total_frames {
         let now = Instant::now();
@@ -337,7 +336,7 @@ pub fn process_video(file: &str, height: u32, audio: bool,
 /// - `loop_video`: Loop the video ?
 /// - `sync`: Activate realtime syncing ?
 /// - `debug`: Print debug info ?
-pub fn process_video_prerender(file: &str, height: u32, audio: bool, 
+pub fn process_video_prerender(file: &str, height: u32, audio: bool,
                                res: bool, loop_video: bool, sync: bool,
                                debug: bool){
     // Get process id
@@ -351,7 +350,7 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
     let (total_frames, spf) = get_frame_info(file);
     // Duration per frame
     let dpf = Duration::from_secs_f64(spf);
-    
+
     /*** PRERENDERING ***/
     // Let the user know we're not dead
     println!("Extracting frames... (Might take a while)");
@@ -375,7 +374,7 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
     print!("\x1b[1F");
     // Hide cursor
     print!("\x1b[?25l");
-    
+
     /*** AUDIO ***/
     // Using rodio to play audio
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
@@ -385,12 +384,12 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
         let source = extract_audio(file);
         sink.append(source.repeat_infinite());
     }
-    
+
     /*** PROCESSING ***/
     while frame < total_frames {
         let now = Instant::now();
         // Print frame
-        process_image(&format!(".adplaytmp/{}_{}.bmp", pid, frame), 
+        process_image(&format!(".adplaytmp/{}_{}.bmp", pid, frame),
                       height, res);
         // Check fps, and sleep if needed
         if sync {
@@ -404,7 +403,7 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
             };
         }
         frame += incr;
-        
+
         // At the end of the media
         if loop_video && frame >= total_frames {
             frame = 0.;

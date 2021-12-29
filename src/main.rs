@@ -12,10 +12,10 @@ use std::cmp::min;
 mod graphics;
 
 
-const SUPPORTED_VIDEOS: [&str; 23] = ["gif", "avi", "mp4", "mkv", "m2v", 
-                                      "ogg", "ogv", "aac", "aax", 
-                                      "mov", "wmv", "avchd", "m4p", 
-                                      "f4v", "swf", "mkv", "yuv", "webm", 
+const SUPPORTED_VIDEOS: [&str; 23] = ["gif", "avi", "mp4", "mkv", "m2v",
+                                      "ogg", "ogv", "aac", "aax",
+                                      "mov", "wmv", "avchd", "m4p",
+                                      "f4v", "swf", "mkv", "yuv", "webm",
                                       "amv", "m4v", "3gp", "3g2", "nsv"];
 
 
@@ -28,7 +28,7 @@ fn main() {
         println!("Exiting.");
         std::process::exit(0); // Exit process
     }).expect("Error setting Ctrl-C handler");
-    
+
     // Load cli config
     let matches = App::new("batimg")
         .version("1.1")

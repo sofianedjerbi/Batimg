@@ -133,7 +133,7 @@ pub fn print_image_hpm(image: RgbaImage) {
 /// Process and print an image
 /// # Parameters:
 /// - `file`: Path to the image
-/// - `height`: Height of the image
+/// - `height`: Height of the image in characters
 /// - `res`: Are we using the half pixel mode ?
 pub fn process_image(file: &str, height: u32, res: bool){
     let raw_img = load_image(file);
@@ -147,11 +147,12 @@ pub fn process_image(file: &str, height: u32, res: bool){
     let w = img.width();
     let h = img.height();
     if res {
-        let img = resize_image(&img, w*height/h, height);
+        let img = resize_image(&img, 2*w*height/h, 2*height);
         print_image_hpm(img);
     } 
     else {
-        let img = resize_image(&img, w*height/h, height/2);
+        println!("{}", height);
+        let img = resize_image(&img, 2*w*height/h, height);
         print_image(img);
     }
 }
@@ -269,8 +270,6 @@ pub fn process_video(file: &str, height: u32, audio: bool,
     let dpf = Duration::from_secs_f64(spf);
     // Hide cursor
     print!("\x1b[?25l");
-    // Save position
-    print!("\x1b[s");
     
     /*** AUDIO ***/
     // Using rodio to play audio
@@ -322,8 +321,9 @@ pub fn process_video(file: &str, height: u32, audio: bool,
         }
         // Flush
         stdout().flush().unwrap();
-        print!("\x1b[u"); // Goto beginning
+        print!("\x1b[{}F", height); // Goto beginning
     }
+    print!("\x1b[?J"); // Clean
     print!("\x1b[?25h"); // Show cursor
     clean_tmp_files();
 }
@@ -372,12 +372,9 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
     });
 
     // Remove "extracting frames"...
-
     print!("\x1b[1F");
     // Hide cursor
     print!("\x1b[?25l");
-    // Save position
-    print!("\x1b[s");
     
     /*** AUDIO ***/
     // Using rodio to play audio
@@ -418,8 +415,9 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
         }
         // Flush
         stdout().flush().unwrap();
-        print!("\x1b[u"); // Goto beginning
+        print!("\x1b[{}F", height); // Goto beginning
     }
+    print!("\x1b[?J"); // Clean
     print!("\x1b[?25h"); // Show cursor
     clean_tmp_files();
 }

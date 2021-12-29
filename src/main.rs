@@ -23,7 +23,7 @@ fn main() {
     // Handle CTRL + C (on videos)
     ctrlc::set_handler(move || {
         print!("\x1b[?25h"); // Show cursor again
-        print!("\x1bc"); // Clear everything
+        print!("\x1b[0J"); // Clear everything
         graphics::clean_tmp_files(); // Remove tmp files
         println!("Exiting.");
         std::process::exit(0); // Exit process
@@ -103,7 +103,7 @@ fn main() {
         };
     }
     else if let Some((Width(w), Height(h))) = size { // In terminal
-        height = min(h, w) as u32;
+        height = min(h, w) as u32 - 1;
     }
     else { // Cannot get terminal size
         eprintln!("Unable to get canvas size, please use <--size> option.");

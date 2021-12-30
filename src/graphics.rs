@@ -115,7 +115,7 @@ pub fn print_image_hpm(image: RgbaImage) {
             if (*pxu)[3] == 0 && (*pxl)[3] == 0 { // Both transparent
                 printe!()
             }
-            if (*pxu)[3] == 0 { // Upper transparent
+            else if (*pxu)[3] == 0 { // Upper transparent
                 printcf!("▄", (*pxl)[0], (*pxl)[1], (*pxl)[2]);
             }
             else if (*pxl)[3] == 0 { // Lower transparent
@@ -321,7 +321,7 @@ pub fn process_video(file: &str, height: u32, audio: bool,
         stdout().flush().unwrap();
         print!("\x1b[{}F", height); // Goto beginning
     }
-    print!("\x1b[?J"); // Clean
+    print!("\x1b[?2J"); // Clean
     print!("\x1b[?25h"); // Show cursor
     clean_tmp_files();
 }
@@ -415,8 +415,9 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
         stdout().flush().unwrap();
         print!("\x1b[{}F", height); // Goto beginning
     }
-    print!("\x1b[?J"); // Clean
+    print!("\x1b[?2J"); // Clean
     print!("\x1b[?25h"); // Show cursor
+    stdout().flush().unwrap();
     clean_tmp_files();
 }
 

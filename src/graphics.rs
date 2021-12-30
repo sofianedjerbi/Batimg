@@ -23,7 +23,7 @@ use image::RgbaImage;
 #[macro_export]
 macro_rules! printcf {
     ($t: expr, $r: expr, $g: expr, $b: expr) => {
-        print!("\x1b[38;2;{};{};{}m{}", $r, $g, $b, $t);
+        print!("\x1b[0m\x1b[38;2;{};{};{}m{}", $r, $g, $b, $t);
     }
 }
 /// Print with colors (r, g, b) on the background

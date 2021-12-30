@@ -4,7 +4,7 @@
 </p>
 
 `batimg` is a small program written in Rust, designed to be fast and compatible with every terminal.   
-It can print images/videos in almost [every format](https://ffmpeg.org/ffmpeg-formats.html) in your terminal.
+It can print images and play videos in almost [every format](https://ffmpeg.org/ffmpeg-formats.html) in your terminal.
 
 ## Build
 Build bin and install dependencies: `cargo build --release`  

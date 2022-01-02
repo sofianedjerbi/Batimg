@@ -40,7 +40,7 @@ EXAMPLES:
 - [x] Show images
 - [x] Play videos
 - [x] Play audio
-- [ ] Improving the resolution
+- [x] Improving the resolution
 - [ ] Improving cleaning escape codes
 - [ ] Getting rid of FFmpeg high CPU usage (Frame extraction)
 

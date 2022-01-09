@@ -1,0 +1,15 @@
+[package]
+name = "videostream"
+version = "0.1.0"
+authors = ["Ashley <expenses@airmail.cc>"]
+repository = "https://github.com/expenses/videostream"
+description = "A rust library that provided a simple iterator around video files."
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+image = "0"
+ffmpeg = {git = "https://github.com/meh/rust-ffmpeg"}
+
+[dev-dependencies]
+rustface = "*"

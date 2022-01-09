@@ -135,7 +135,7 @@ fn main() {
 
     // PROCESS PICTURE
     if !is_video {
-        graphics::process_image(file, height, resolution);
+        graphics::process_file(file, height, resolution);
     }
     // PROCESS VIDEO
     else {

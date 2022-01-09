@@ -18,6 +18,7 @@ use image::ImageError;
 use image::io::Reader;
 use image::RgbaImage;
 
+use videostream::VideoStream;
 
 /// Print with colors (r, g, b) on the foreground
 #[macro_export]
@@ -132,10 +133,28 @@ pub fn print_image_hpm(image: RgbaImage) {
 
 /// Process and print an image
 /// # Parameters:
+/// - image: RgbaImage representing the image to be printed
+/// - `height`: Height of the image in characters
+/// - `res`: Are we using the half pixel mode ?
+pub fn process_image(image: RgbaImage, height: u32, res: bool) {
+    let w = image.width();
+    let h = image.height();
+    if res {
+        let image = resize_image(&image, 2*w*height/h, 2*height);
+        print_image_hpm(image);
+    }
+    else {
+        let image = resize_image(&image, 2*w*height/h, height);
+        print_image(image);
+    }
+}
+
+/// Process and print a file
+/// # Parameters:
 /// - `file`: Path to the image
 /// - `height`: Height of the image in characters
 /// - `res`: Are we using the half pixel mode ?
-pub fn process_image(file: &str, height: u32, res: bool){
+pub fn process_file(file: &str, height: u32, res: bool) {
     let raw_img = load_image(file);
     let img = match raw_img {
         Ok(pic) => pic,
@@ -144,16 +163,7 @@ pub fn process_image(file: &str, height: u32, res: bool){
             std::process::exit(4);
         },
     };
-    let w = img.width();
-    let h = img.height();
-    if res {
-        let img = resize_image(&img, 2*w*height/h, 2*height);
-        print_image_hpm(img);
-    }
-    else {
-        let img = resize_image(&img, 2*w*height/h, height);
-        print_image(img);
-    }
+    process_image(img, height, res);
 }
 
 /// Get SPF and total frame number of a video
@@ -261,7 +271,7 @@ pub fn process_video(file: &str, height: u32, audio: bool,
     // Setting default incriementation (ideal)
     let mut incr: f64 = 1.;
     // Current frame
-    let mut frame: f64 = 0.;
+    let mut framenb: f64 = 0.;
     // Getting total number of frames and frames per sec
     let (total_frames, spf) = get_frame_info(file);
     // Duration per frame
@@ -278,24 +288,21 @@ pub fn process_video(file: &str, height: u32, audio: bool,
         let source = extract_audio(file);
         sink.append(source.repeat_infinite());
     }
+    // Get videostream
+    let mut stream = VideoStream::new(file).unwrap();
 
     /*** PROCESSING ***/
-    while frame < total_frames {
+    for frame in stream.iter() {
+        framenb += 1.0;
+
+        if framenb % incr != 0.0 {
+            continue;
+        }
         let now = Instant::now();
         // Get frame
-        Command::new("ffmpeg")
-            .arg("-ss")
-            .arg((spf*frame).to_string())
-            .arg("-y")
-            .arg("-i")
-            .arg(file)
-            .arg("-frames:v")
-            .arg("1")
-            .arg(format!(".adplaytmp/{}.bmp", pid))
-            .output()
-            .expect("Failed to execute FFmpeg process.");
+        let image = frame.as_rgba().unwrap();
         // Print frame
-        process_image(&format!(".adplaytmp/{}.bmp", pid), height, res);
+        process_image(image, height, res);
         // Check fps, and sleep if needed
         if sync {
             match dpf.saturating_mul(incr as u32)
@@ -307,15 +314,15 @@ pub fn process_video(file: &str, height: u32, audio: bool,
                 None => incr += 1. // Incr frameskip if cant keep up
             };
         }
-        frame += incr;
-
+        /* TODO
         // At the end of the media
         if loop_video && frame >= total_frames {
             frame = 0.;
         }
+        */
         // Debug info
         if debug {
-            print!("Frame: {} | Frameskip: {}", frame, incr);
+            print!("Frame: {} | Frameskip: {}", framenb, incr);
         }
         // Flush
         stdout().flush().unwrap();
@@ -388,7 +395,7 @@ pub fn process_video_prerender(file: &str, height: u32, audio: bool,
     while frame < total_frames {
         let now = Instant::now();
         // Print frame
-        process_image(&format!(".adplaytmp/{}_{}.bmp", pid, frame),
+        process_file(&format!(".adplaytmp/{}_{}.bmp", pid, frame),
                       height, res);
         // Check fps, and sleep if needed
         if sync {

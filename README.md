@@ -1,6 +1,6 @@
 # batimg
 <p align="center">
-  <img src="./demo.gif">
+  <img src="./resources/demo.gif">
 </p>
 
 `batimg` is a small program written in Rust, designed to be fast and compatible with every terminal.   
@@ -41,8 +41,9 @@ EXAMPLES:
 - [x] Play videos
 - [x] Play audio
 - [x] Improving the resolution
-- [ ] Improving cleaning escape codes
-- [ ] Getting rid of FFmpeg high CPU usage (Frame extraction)
+- [x] Improving cleaning escape codes
+- [x] Getting rid of FFmpeg high CPU usage (Frame extraction)
+- [ ] "Debug everything" phase
 
 ## batimg vs catimg
 
@@ -120,7 +121,7 @@ EXAMPLES:
 </div>
 
 <p align="center">
-  <img src="./rendering.gif">
+  <img src="./resources/rendering.gif">
 </p>
 
 <p align="center">

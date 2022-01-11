@@ -9,6 +9,7 @@ use ctrlc::set_handler;
 
 use clap::Parser;
 
+mod batvideostream;
 mod batimage;
 mod batvideo;
 

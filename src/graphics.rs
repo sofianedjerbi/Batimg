@@ -225,17 +225,25 @@ pub fn clean_tmp_files(){
 /// Print a video using native FFmpeg decoder (no disk I/O, no subprocess spawning)
 /// # Parameters
 /// - `file`: Path to the video file
-/// - `height`: Height of the image in terminal characters
+/// - `width`: Width of the terminal in characters
+/// - `height`: Height of the terminal in characters
 /// - `audio`: Are we playing the audio?
 /// - `res`: Are we using the half pixel mode?
 /// - `loop_video`: Loop the video?
 /// - `sync`: Activate realtime syncing?
 /// - `debug`: Print debug info?
-pub fn process_video(file: &str, height: u32, audio: bool,
+pub fn process_video(file: &str, width: u32, height: u32, audio: bool,
                      res: bool, loop_video: bool, sync: bool,
                      debug: bool) {
-    // Initialize FFmpeg
+    // Clear screen and hide cursor FIRST (before any processing)
+    print!("\x1b[2J");        // Clear entire screen
+    print!("\x1b[H");         // Move cursor to home position
+    print!("\x1b[?25l");      // Hide cursor
+    stdout().flush().unwrap();
+
+    // Initialize FFmpeg and suppress log output
     ffmpeg::init().expect("Failed to initialize FFmpeg");
+    ffmpeg::util::log::set_level(ffmpeg::util::log::Level::Quiet);
 
     /*** OPEN VIDEO FILE ***/
     let mut ictx = format::input(&file)
@@ -274,9 +282,6 @@ pub fn process_video(file: &str, height: u32, audio: bool,
         scaling::Flags::BILINEAR,
     ).expect("Failed to create scaler");
 
-    // Hide cursor
-    print!("\x1b[?25l");
-
     /*** AUDIO ***/
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     let sink = Sink::try_new(&stream_handle).unwrap();
@@ -289,17 +294,8 @@ pub fn process_video(file: &str, height: u32, audio: bool,
     /*** PROCESSING ***/
     let mut frame_num: f64 = 0.;
     let mut incr: f64 = 1.;
-    let mut should_seek = false;
 
     'main_loop: loop {
-        // Handle seeking outside the packet iteration
-        if should_seek {
-            ictx.seek(0, ..0).ok();
-            decoder.flush();
-            frame_num = 0.;
-        }
-        should_seek = false;
-
         let mut reached_end = false;
 
         for (stream, packet) in ictx.packets() {
@@ -316,14 +312,44 @@ pub fn process_video(file: &str, height: u32, audio: bool,
             while decoder.receive_frame(&mut decoded).is_ok() {
                 // Convert frame to RgbaImage
                 if let Ok(rgba_img) = frame_to_rgba(&decoded, &mut scaler) {
-                    // Resize and display
-                    let w = rgba_img.width();
-                    let h = rgba_img.height();
+                    // Calculate dimensions to fit terminal while maintaining aspect ratio
+                    let video_w = rgba_img.width() as f32;
+                    let video_h = rgba_img.height() as f32;
+                    let aspect_ratio = video_w / video_h;
 
-                    let resized_img = if res {
-                        resize_image(&rgba_img, 2*w*height/h, 2*height)
+                    // Calculate target dimensions based on resolution mode
+                    let (target_h, target_w) = if res {
+                        // In high-res mode, we use half-pixel characters (2 pixels per char vertically)
+                        let max_h = height * 2;
+                        let calc_w = (max_h as f32 * aspect_ratio) as u32;
+
+                        if calc_w <= width {
+                            (max_h, calc_w)
+                        } else {
+                            // Width constraint is tighter
+                            let fit_h = (width as f32 / aspect_ratio) as u32;
+                            (fit_h, width)
+                        }
                     } else {
-                        resize_image(&rgba_img, 2*w*height/h, height)
+                        // Normal mode: 1 pixel per character vertically
+                        let calc_w = (height as f32 * aspect_ratio * 2.0) as u32; // *2 for char width/height ratio
+
+                        if calc_w <= width {
+                            (height, calc_w)
+                        } else {
+                            // Width constraint is tighter
+                            let fit_h = (width as f32 / (aspect_ratio * 2.0)) as u32;
+                            (fit_h, width)
+                        }
+                    };
+
+                    let resized_img = resize_image(&rgba_img, target_w, target_h);
+
+                    // Calculate actual display height (in terminal lines)
+                    let display_height = if res {
+                        (target_h + 1) / 2  // Half-pixel mode uses 2 pixels per line
+                    } else {
+                        target_h
                     };
 
                     // Print the frame
@@ -349,7 +375,7 @@ pub fn process_video(file: &str, height: u32, audio: bool,
                     }
 
                     stdout().flush().unwrap();
-                    print!("\x1b[{}F", height); // Move cursor to beginning
+                    print!("\x1b[{}F", display_height); // Move cursor to beginning
                 }
 
                 // Check if we've reached the end
@@ -367,7 +393,10 @@ pub fn process_video(file: &str, height: u32, audio: bool,
         // Handle end of video
         if reached_end || !loop_video {
             if loop_video && reached_end {
-                should_seek = true;
+                // Seek back to beginning for loop
+                ictx.seek(0, ..0).ok();
+                decoder.flush();
+                frame_num = 0.;
                 continue 'main_loop;
             }
             break 'main_loop;
@@ -375,7 +404,9 @@ pub fn process_video(file: &str, height: u32, audio: bool,
 
         // If packets ended naturally and we're looping
         if loop_video {
-            should_seek = true;
+            ictx.seek(0, ..0).ok();
+            decoder.flush();
+            frame_num = 0.;
         } else {
             break;
         }

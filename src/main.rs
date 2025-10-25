@@ -6,7 +6,6 @@ use clap::{App, Arg};
 use ctrlc;
 
 use std::path::Path;
-use std::cmp::min;
 
 mod graphics;
 
@@ -75,6 +74,7 @@ fn main() {
     // Variables to populate
     let file: &str;
     let height: u32;
+    let width: u32;
     let is_video: bool;
 
     // Flag variables
@@ -94,9 +94,11 @@ fn main() {
                 std::process::exit(7);
             }
         };
+        width = height * 2; // Assume 2:1 ratio for characters
     }
     else if let Some((Width(w), Height(h))) = size { // In terminal
-        height = min(h, w) as u32 - 1;
+        height = (h as u32).saturating_sub(1);
+        width = w as u32;
     }
     else { // Cannot get terminal size
         eprintln!("Unable to get canvas size, please use <--size> option.");
@@ -132,7 +134,7 @@ fn main() {
     }
     // PROCESS VIDEO
     else {
-        graphics::process_video(file, height, play_audio,
+        graphics::process_video(file, width, height, play_audio,
                                 resolution, loop_video,
                                 !timesync, debug);
     }

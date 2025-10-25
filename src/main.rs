@@ -1,11 +1,10 @@
 // Uses the api provided in graphics.rs
 // To build a cli tool that get images
-// Author: Sofiane DJERBI (@Kugge)
+// Author: Sofiane Djerbi (@sofianedjerbi)
 use terminal_size::{Width, Height, terminal_size};
 use clap::{App, Arg};
 use ctrlc;
 
-use std::fs::create_dir;
 use std::path::Path;
 use std::cmp::min;
 
@@ -32,7 +31,7 @@ fn main() {
     // Load cli config
     let matches = App::new("batimg")
         .version("1.1")
-        .author("Sofiane D. <@Kugge>")
+        .author("Sofiane Djerbi <@sofianedjerbi>")
         .about("Graphic content on your tty")
         .arg(Arg::new("size")
             .short('s')
@@ -65,11 +64,6 @@ fn main() {
             .long("resolution")
             .help("Disable high resolution mode (half pixel character)")
             .takes_value(false))
-        .arg(Arg::new("prerender")
-            .short('p')
-            .long("prerender")
-            .help("Export frames first (unstable)")
-            .takes_value(false))
         .arg(Arg::new("FILE")
             .help("Path to the media")
             .value_name("FILE")
@@ -87,7 +81,6 @@ fn main() {
     let debug: bool = matches.is_present("debug");
     let play_audio: bool = matches.is_present("audio");
     let timesync: bool = matches.is_present("timesync");
-    let prerender: bool = matches.is_present("prerender");
     let resolution: bool = !matches.is_present("resolution");
     let mut loop_video: bool = matches.is_present("loop");
 
@@ -139,17 +132,9 @@ fn main() {
     }
     // PROCESS VIDEO
     else {
-        create_dir(".adplaytmp").ok();
-        if prerender {
-            graphics::process_video_prerender(file, height, play_audio,
-                                              resolution, loop_video,
-                                              !timesync, debug);
-        }
-        else {
-            graphics::process_video(file, height, play_audio,
-                                    resolution, loop_video,
-                                    !timesync, debug);
-        }
+        graphics::process_video(file, height, play_audio,
+                                resolution, loop_video,
+                                !timesync, debug);
     }
 }
 

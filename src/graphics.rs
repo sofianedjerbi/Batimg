@@ -1,22 +1,20 @@
 /// graphics.rs - Load images and generate ascii data
-/// Author: Sofiane DJERBI (@Kugge)
-use std::fs::{File, remove_dir_all};
+/// Author: Sofiane Djerbi (@sofianedjerbi)
+use std::fs::File;
 use std::time::{Duration, Instant};
-use std::process::{Command, id};
-use std::io::{stdout, Write};
+use std::io::{stdout, Write, BufReader};
 use std::thread::sleep;
-use std::io::BufReader;
-use std::str;
 
 use rodio::{Source, Sink, Decoder, OutputStream};
 
-use rayon::prelude::*;
-
 use image::imageops::FilterType;
 use image::imageops::resize;
-use image::ImageError;
+use image::{ImageError, RgbaImage, ImageBuffer};
 use image::io::Reader;
-use image::RgbaImage;
+
+use ffmpeg_next as ffmpeg;
+use ffmpeg::{format, media, codec, software::scaling};
+use ffmpeg::util::frame::video::Video as VideoFrame;
 
 
 /// Print with colors (r, g, b) on the foreground
@@ -156,65 +154,46 @@ pub fn process_image(file: &str, height: u32, res: bool){
     }
 }
 
-/// Get SPF and total frame number of a video
+/// Convert FFmpeg video frame to RgbaImage
 /// # Parameters
-/// - `file`: File path
-/// # Returns
-/// A tuple (total frame number, second per frame)
-fn get_frame_info(file: &str) -> (f64, f64) {
-    let raw_frames = Command::new("ffprobe")
-        .arg("-v")
-        .arg("error")
-        .arg("-select_streams")
-        .arg("v:0")
-        .arg("-count_packets")
-        .arg("-show_entries")
-        .arg("stream=nb_read_packets")
-        .arg("-of")
-        .arg("csv=p=0")
-        .arg(file)
-        .output()
-        .expect("Failed to execute FFprobe process.");
-    let total_frames = str::from_utf8(&raw_frames.stdout)
-        .unwrap()
-        .replace("\n", "")
-        .parse::<u32>()
-        .unwrap() as f64;
-    // Getting fps
-    let ffprobe_fps = Command::new("ffprobe")
-        .arg("-v")
-        .arg("error")
-        .arg("-select_streams")
-        .arg("v")
-        .arg("-show_entries")
-        .arg("stream=r_frame_rate")
-        .arg("-of")
-        .arg("default=noprint_wrappers=1:nokey=1")
-        .arg(file)
-        .output()
-        .expect("Failed to execute FFprobe process.");
-    let str_fps = str::from_utf8(&ffprobe_fps.stdout)
-        .unwrap()
-        .split("\n")
-        .next()
-        .unwrap();
-    let raw_fps: Vec<&str> = str_fps.split("/").collect();
-    // dividende
-    let fps1 = raw_fps[0].parse::<f64>().unwrap();
-    // divisor
-    let fps2 = raw_fps[1].parse::<f64>().unwrap();
-    // Second per frame
-    let spf = fps2/fps1;
-    return (total_frames, spf)
+/// - `frame`: FFmpeg video frame
+/// - `scaler`: FFmpeg scaler context
+fn frame_to_rgba(frame: &VideoFrame, scaler: &mut scaling::Context) -> Result<RgbaImage, String> {
+    let mut rgb_frame = VideoFrame::empty();
+    scaler.run(frame, &mut rgb_frame)
+        .map_err(|e| format!("Scaling error: {}", e))?;
+
+    let width = rgb_frame.width();
+    let height = rgb_frame.height();
+    let data = rgb_frame.data(0);
+    let stride = rgb_frame.stride(0);
+
+    let mut img_data = Vec::with_capacity((width * height * 4) as usize);
+
+    for y in 0..height {
+        let row_start = (y * stride as u32) as usize;
+        for x in 0..width {
+            let pixel_start = row_start + (x * 4) as usize;
+            img_data.push(data[pixel_start]);     // R
+            img_data.push(data[pixel_start + 1]); // G
+            img_data.push(data[pixel_start + 2]); // B
+            img_data.push(data[pixel_start + 3]); // A
+        }
+    }
+
+    ImageBuffer::from_raw(width, height, img_data)
+        .ok_or_else(|| "Failed to create image buffer".to_string())
 }
 
-/// Extract an audio source
+/// Extract audio source from video using FFmpeg decoder
 /// # Parameters
 /// - `file`: Path to the file
-pub fn extract_audio(file: &str) -> Decoder<BufReader<File>> {
-    // Get process id
-    let pid = id();
-    Command::new("ffmpeg")
+fn extract_audio(file: &str) -> Result<Decoder<BufReader<File>>, String> {
+    // Create temp audio file
+    let temp_audio = format!("/tmp/batimg_audio_{}.mp3", std::process::id());
+
+    // Extract audio using FFmpeg
+    let output = std::process::Command::new("ffmpeg")
         .arg("-y")
         .arg("-i")
         .arg(file)
@@ -222,202 +201,189 @@ pub fn extract_audio(file: &str) -> Decoder<BufReader<File>> {
         .arg("0")
         .arg("-map")
         .arg("a")
-        .arg(format!(".adplaytmp/{}.mp3", pid))
+        .arg(&temp_audio)
         .output()
-        .expect("Failed to extract audio with FFmpeg.");
-    // Deconding mp3
-    let filemp3 = BufReader::new(
-        match File::open(format!(".adplaytmp/{}.mp3", pid)) {
-            Ok(obj)   => obj,
-            Err(_err) => {
-                eprintln!("Video does not contain any audio.");
-                std::process::exit(8);
-            }
-        }
-    );
-    return Decoder::new(filemp3).unwrap();
+        .map_err(|e| format!("Failed to execute FFmpeg: {}", e))?;
+
+    if !output.status.success() {
+        return Err("Video does not contain audio".to_string());
+    }
+
+    // Open and decode the audio file
+    let audio_file = File::open(&temp_audio)
+        .map_err(|_| "Failed to open extracted audio".to_string())?;
+
+    Decoder::new(BufReader::new(audio_file))
+        .map_err(|e| format!("Failed to decode audio: {}", e))
 }
 
-/// Delete temp directory
+/// Cleanup temp audio file
 pub fn clean_tmp_files(){
-    remove_dir_all(".adplaytmp").ok();
+    std::fs::remove_file(format!("/tmp/batimg_audio_{}.mp3", std::process::id())).ok();
 }
 
-/// Print a video using ffmpeg
+/// Print a video using native FFmpeg decoder (no disk I/O, no subprocess spawning)
 /// # Parameters
-/// - `file`: Path to the image
-/// - `height`: Height of the image
-/// - `audio`: Are we playing the audio ?
-/// - `res`: Are we using the half pixel mode ?
-/// - `loop_video`: Loop the video ?
-/// - `sync`: Activate realtime syncing ?
-/// - `debug`: Print debug info ?
+/// - `file`: Path to the video file
+/// - `height`: Height of the image in terminal characters
+/// - `audio`: Are we playing the audio?
+/// - `res`: Are we using the half pixel mode?
+/// - `loop_video`: Loop the video?
+/// - `sync`: Activate realtime syncing?
+/// - `debug`: Print debug info?
 pub fn process_video(file: &str, height: u32, audio: bool,
                      res: bool, loop_video: bool, sync: bool,
                      debug: bool) {
-    // Get process id
-    let pid = id();
-    /*** PREPROCESSING ***/
-    // Setting default incriementation (ideal)
-    let mut incr: f64 = 1.;
-    // Current frame
-    let mut frame: f64 = 0.;
-    // Getting total number of frames and frames per sec
-    let (total_frames, spf) = get_frame_info(file);
-    // Duration per frame
+    // Initialize FFmpeg
+    ffmpeg::init().expect("Failed to initialize FFmpeg");
+
+    /*** OPEN VIDEO FILE ***/
+    let mut ictx = format::input(&file)
+        .expect("Failed to open video file");
+
+    // Find video stream
+    let video_stream_index = ictx.streams()
+        .best(media::Type::Video)
+        .expect("No video stream found")
+        .index();
+
+    let video_stream = ictx.stream(video_stream_index).unwrap();
+
+    // Get video metadata
+    let frame_rate = video_stream.avg_frame_rate();
+    let spf = frame_rate.1 as f64 / frame_rate.0 as f64; // seconds per frame
     let dpf = Duration::from_secs_f64(spf);
+
+    // Get total frames (if available)
+    let total_frames = video_stream.frames() as f64;
+
+    /*** SETUP DECODER ***/
+    let context_decoder = codec::context::Context::from_parameters(video_stream.parameters())
+        .expect("Failed to create codec context");
+    let mut decoder = context_decoder.decoder().video()
+        .expect("Failed to create video decoder");
+
+    // Setup scaler to convert to RGBA
+    let mut scaler = scaling::Context::get(
+        decoder.format(),
+        decoder.width(),
+        decoder.height(),
+        ffmpeg::format::Pixel::RGBA,
+        decoder.width(),
+        decoder.height(),
+        scaling::Flags::BILINEAR,
+    ).expect("Failed to create scaler");
+
     // Hide cursor
     print!("\x1b[?25l");
 
     /*** AUDIO ***/
-    // Using rodio to play audio
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     let sink = Sink::try_new(&stream_handle).unwrap();
-    // Extract and play audio
     if audio {
-        let source = extract_audio(file);
-        sink.append(source.repeat_infinite());
+        if let Ok(source) = extract_audio(file) {
+            sink.append(source.repeat_infinite());
+        }
     }
 
     /*** PROCESSING ***/
-    while frame < total_frames {
-        let now = Instant::now();
-        // Get frame
-        Command::new("ffmpeg")
-            .arg("-ss")
-            .arg((spf*frame).to_string())
-            .arg("-y")
-            .arg("-i")
-            .arg(file)
-            .arg("-frames:v")
-            .arg("1")
-            .arg(format!(".adplaytmp/{}.bmp", pid))
-            .output()
-            .expect("Failed to execute FFmpeg process.");
-        // Print frame
-        process_image(&format!(".adplaytmp/{}.bmp", pid), height, res);
-        // Check fps, and sleep if needed
-        if sync {
-            match dpf.saturating_mul(incr as u32)
-                     .checked_sub(now.elapsed()) {
-                Some(duration) => {
-                    sleep(duration);
-                    //incr -= if incr > 1. {1.} else {0.};
-                },
-                None => incr += 1. // Incr frameskip if cant keep up
-            };
-        }
-        frame += incr;
-
-        // At the end of the media
-        if loop_video && frame >= total_frames {
-            frame = 0.;
-        }
-        // Debug info
-        if debug {
-            print!("Frame: {} | Frameskip: {}", frame, incr);
-        }
-        // Flush
-        stdout().flush().unwrap();
-        print!("\x1b[{}F", height); // Goto beginning
-    }
-    print!("\x1b[?2J"); // Clean
-    print!("\x1b[?25h"); // Show cursor
-    clean_tmp_files();
-}
-
-/// Print a video but prerender every frame before
-/// # Parameters
-/// - `file`: Path to the image
-/// - `height`: Height of the image
-/// - `audio`: Are we playing the audio ?
-/// - `res`: Are we using the half pixel mode ?
-/// - `loop_video`: Loop the video ?
-/// - `sync`: Activate realtime syncing ?
-/// - `debug`: Print debug info ?
-pub fn process_video_prerender(file: &str, height: u32, audio: bool,
-                               res: bool, loop_video: bool, sync: bool,
-                               debug: bool){
-    // Get process id
-    let pid = id();
-    /*** PREPROCESSING ***/
-    // Setting default incriementation (ideal)
+    let mut frame_num: f64 = 0.;
     let mut incr: f64 = 1.;
-    // Current frame
-    let mut frame: f64 = 0.;
-    // Getting total number of frames and frames per sec
-    let (total_frames, spf) = get_frame_info(file);
-    // Duration per frame
-    let dpf = Duration::from_secs_f64(spf);
+    let mut should_seek = false;
 
-    /*** PRERENDERING ***/
-    // Let the user know we're not dead
-    println!("Extracting frames... (Might take a while)");
+    'main_loop: loop {
+        // Handle seeking outside the packet iteration
+        if should_seek {
+            ictx.seek(0, ..0).ok();
+            decoder.flush();
+            frame_num = 0.;
+        }
+        should_seek = false;
 
-    // Extracting every frame (Multithreaded)
-    (0..(total_frames as u64)).into_par_iter().for_each(|i| {
-        Command::new("ffmpeg")
-            .arg("-ss")
-            .arg((spf*(i as f64)).to_string())
-            //.arg("-y")
-            .arg("-i")
-            .arg(file)
-            .arg("-frames:v")
-            .arg("1")
-            .arg(format!(".adplaytmp/{}_{}.bmp", pid, i))
-            .output()
-            .expect("Failed to execute FFmpeg process.");
-    });
+        let mut reached_end = false;
 
-    // Remove "extracting frames"...
-    print!("\x1b[1F\x1b[0K");
-    // Hide cursor
-    print!("\x1b[?25l");
+        for (stream, packet) in ictx.packets() {
+            if stream.index() != video_stream_index {
+                continue;
+            }
 
-    /*** AUDIO ***/
-    // Using rodio to play audio
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-    let sink = Sink::try_new(&stream_handle).unwrap();
-    // Extract and play audio
-    if audio {
-        let source = extract_audio(file);
-        sink.append(source.repeat_infinite());
+            let now = Instant::now();
+
+            // Decode packet
+            decoder.send_packet(&packet).ok();
+
+            let mut decoded = VideoFrame::empty();
+            while decoder.receive_frame(&mut decoded).is_ok() {
+                // Convert frame to RgbaImage
+                if let Ok(rgba_img) = frame_to_rgba(&decoded, &mut scaler) {
+                    // Resize and display
+                    let w = rgba_img.width();
+                    let h = rgba_img.height();
+
+                    let resized_img = if res {
+                        resize_image(&rgba_img, 2*w*height/h, 2*height)
+                    } else {
+                        resize_image(&rgba_img, 2*w*height/h, height)
+                    };
+
+                    // Print the frame
+                    if res {
+                        print_image_hpm(resized_img);
+                    } else {
+                        print_image(resized_img);
+                    }
+
+                    // FPS sync
+                    if sync {
+                        match dpf.saturating_mul(incr as u32).checked_sub(now.elapsed()) {
+                            Some(duration) => sleep(duration),
+                            None => incr += 1., // Frame skip if can't keep up
+                        };
+                    }
+
+                    frame_num += incr;
+
+                    // Debug info
+                    if debug {
+                        print!("Frame: {} | Frameskip: {}", frame_num, incr);
+                    }
+
+                    stdout().flush().unwrap();
+                    print!("\x1b[{}F", height); // Move cursor to beginning
+                }
+
+                // Check if we've reached the end
+                if total_frames > 0.0 && frame_num >= total_frames {
+                    reached_end = true;
+                    break;
+                }
+            }
+
+            if reached_end {
+                break;
+            }
+        }
+
+        // Handle end of video
+        if reached_end || !loop_video {
+            if loop_video && reached_end {
+                should_seek = true;
+                continue 'main_loop;
+            }
+            break 'main_loop;
+        }
+
+        // If packets ended naturally and we're looping
+        if loop_video {
+            should_seek = true;
+        } else {
+            break;
+        }
     }
 
-    /*** PROCESSING ***/
-    while frame < total_frames {
-        let now = Instant::now();
-        // Print frame
-        process_image(&format!(".adplaytmp/{}_{}.bmp", pid, frame),
-                      height, res);
-        // Check fps, and sleep if needed
-        if sync {
-            match dpf.saturating_mul(incr as u32)
-                     .checked_sub(now.elapsed()) {
-                Some(duration) => {
-                    sleep(duration);
-                    //incr -= if incr > 1. {1.} else {0.};
-                },
-                None => incr += 1. // Incr frameskip if cant keep up
-            };
-        }
-        frame += incr;
-
-        // At the end of the media
-        if loop_video && frame >= total_frames {
-            frame = 0.;
-        }
-        // Debug info
-        if debug {
-            print!("Frame: {} | Frameskip: {}", frame, incr);
-        }
-        // Flush
-        stdout().flush().unwrap();
-        print!("\x1b[{}F", height); // Goto beginning
-    }
-    print!("\x1b[?2J"); // Clean
+    print!("\x1b[?2J"); // Clean screen
     print!("\x1b[?25h"); // Show cursor
-    stdout().flush().unwrap();
     clean_tmp_files();
 }
+
 

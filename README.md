@@ -7,8 +7,13 @@
 It can print images and play videos in almost [every format](https://ffmpeg.org/ffmpeg-formats.html) in your terminal.
 
 ## Build
-Build bin and install dependencies: `cargo build --release`  
-Bin location: `./target/release/adplay`
+Build bin and install dependencies: `cargo build --release`
+Bin location: `./target/release/batimg`
+
+## Dependencies
+- **ffmpeg** - Required for video playback
+- **yt-dlp** (optional) - Required for YouTube URL support
+  - Install: `pip install yt-dlp` or download from https://github.com/yt-dlp/yt-dlp
 
 ## Usage
 ```
@@ -16,24 +21,26 @@ USAGE:
     batimg [OPTIONS] <FILE>
 
 ARGS:
-    <FILE>    Path to the media
+    <FILE>    Path to the media or YouTube URL
 
 OPTIONS:
     -d, --debug         Print debug stats
     -a, --audio         Play video audio (unstable)
     -h, --help          Print help information
-    -l, --loop          Loop the video 
+    -l, --loop          Loop the video
     -s, --size <u32>    Canvas size
     -r, --resolution    Disable high resolution mode (half pixel character)
     -p, --prerender     Export frames first (unstable)
     -t, --timesync      Disable realtime synchronization
     -V, --version       Print version information
 
-EXAMPLES: 
+EXAMPLES:
     batimg img.png
     batimg img.jpg -s 100
     batimg video.mp4 -a
     batimg animation.gif
+    batimg https://www.youtube.com/watch?v=dQw4w9WgXcQ
+    batimg https://youtu.be/dQw4w9WgXcQ -a
 ```
 ## Goals
 
@@ -77,7 +84,7 @@ EXAMPLES:
 	  </tr>
 	  <tr>
 	    <td><b>dependencies</b></td>
-	    <td>ffmpeg (videos)</td>
+	    <td>ffmpeg (videos), yt-dlp (optional, for YouTube)</td>
 	    <td>imagemagick</td>
 	  </tr>
 	  <tr>

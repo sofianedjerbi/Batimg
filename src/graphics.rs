@@ -285,15 +285,55 @@ pub fn process_video(file: &str, width: u32, height: u32, audio: bool,
     /*** AUDIO ***/
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     let sink = Sink::try_new(&stream_handle).unwrap();
-    if audio {
-        if let Ok(source) = extract_audio(file) {
-            sink.append(source.repeat_infinite());
+    let audio_source = if audio {
+        extract_audio(file).ok()
+    } else {
+        None
+    };
+
+    /*** PRE-CALCULATE DIMENSIONS ***/
+    // Get video dimensions from first frame decode to calculate target size once
+    let video_w = decoder.width() as f32;
+    let video_h = decoder.height() as f32;
+    let aspect_ratio = video_w / video_h;
+
+    // Calculate target dimensions based on resolution mode
+    let (target_h, target_w) = if res {
+        // In high-res mode, we use half-pixel characters (2 pixels per char vertically)
+        let max_h = height * 2;
+        let calc_w = (max_h as f32 * aspect_ratio) as u32;
+
+        if calc_w <= width {
+            (max_h, calc_w)
+        } else {
+            // Width constraint is tighter
+            let fit_h = (width as f32 / aspect_ratio) as u32;
+            (fit_h, width)
         }
-    }
+    } else {
+        // Normal mode: 1 pixel per character vertically
+        let calc_w = (height as f32 * aspect_ratio * 2.0) as u32; // *2 for char width/height ratio
+
+        if calc_w <= width {
+            (height, calc_w)
+        } else {
+            // Width constraint is tighter
+            let fit_h = (width as f32 / (aspect_ratio * 2.0)) as u32;
+            (fit_h, width)
+        }
+    };
+
+    // Calculate actual display height (in terminal lines)
+    let display_height = if res {
+        (target_h + 1) / 2  // Half-pixel mode uses 2 pixels per line
+    } else {
+        target_h
+    };
 
     /*** PROCESSING ***/
-    let mut frame_num: f64 = 0.;
-    let mut incr: f64 = 1.;
+    let mut frame_num: u64 = 0;
+    let mut start_time = None;
+    let mut audio_started = false;
 
     'main_loop: loop {
         let mut reached_end = false;
@@ -303,83 +343,90 @@ pub fn process_video(file: &str, width: u32, height: u32, audio: bool,
                 continue;
             }
 
-            let now = Instant::now();
-
             // Decode packet
             decoder.send_packet(&packet).ok();
 
             let mut decoded = VideoFrame::empty();
             while decoder.receive_frame(&mut decoded).is_ok() {
+                // Start timing and audio on first frame
+                if start_time.is_none() {
+                    start_time = Some(Instant::now());
+
+                    // Start audio playback synchronized with first frame
+                    if audio_source.is_some() && !audio_started {
+                        // Clone the source for playback
+                        if let Ok(audio_file) = File::open(format!("/tmp/batimg_audio_{}.mp3", std::process::id())) {
+                            if let Ok(decoder) = Decoder::new(BufReader::new(audio_file)) {
+                                sink.append(decoder.repeat_infinite());
+                                audio_started = true;
+                            }
+                        }
+                    }
+                }
+
                 // Convert frame to RgbaImage
                 if let Ok(rgba_img) = frame_to_rgba(&decoded, &mut scaler) {
-                    // Calculate dimensions to fit terminal while maintaining aspect ratio
-                    let video_w = rgba_img.width() as f32;
-                    let video_h = rgba_img.height() as f32;
-                    let aspect_ratio = video_w / video_h;
+                    // Check if we should render this frame or skip it (realtime enforcement)
+                    let should_render = if sync {
+                        if let Some(st) = start_time {
+                            let now = Instant::now();
+                            let elapsed = now.duration_since(st);
+                            let expected_frame = (elapsed.as_secs_f64() / spf) as u64;
 
-                    // Calculate target dimensions based on resolution mode
-                    let (target_h, target_w) = if res {
-                        // In high-res mode, we use half-pixel characters (2 pixels per char vertically)
-                        let max_h = height * 2;
-                        let calc_w = (max_h as f32 * aspect_ratio) as u32;
-
-                        if calc_w <= width {
-                            (max_h, calc_w)
+                            // If we're behind by more than 1 frame, skip rendering
+                            if frame_num < expected_frame.saturating_sub(1) {
+                                // Skip this frame to catch up
+                                frame_num += 1;
+                                false
+                            } else {
+                                // Calculate sleep time for proper sync
+                                let target_time = st + dpf * frame_num as u32;
+                                if let Some(sleep_duration) = target_time.checked_duration_since(now) {
+                                    // We're ahead of schedule, sleep to maintain sync
+                                    sleep(sleep_duration);
+                                }
+                                true
+                            }
                         } else {
-                            // Width constraint is tighter
-                            let fit_h = (width as f32 / aspect_ratio) as u32;
-                            (fit_h, width)
+                            true
                         }
                     } else {
-                        // Normal mode: 1 pixel per character vertically
-                        let calc_w = (height as f32 * aspect_ratio * 2.0) as u32; // *2 for char width/height ratio
+                        true
+                    };
 
-                        if calc_w <= width {
-                            (height, calc_w)
+                    if should_render {
+                        // Resize image with pre-calculated dimensions
+                        let resized_img = resize_image(&rgba_img, target_w, target_h);
+
+                        // Print the frame
+                        if res {
+                            print_image_hpm(resized_img);
                         } else {
-                            // Width constraint is tighter
-                            let fit_h = (width as f32 / (aspect_ratio * 2.0)) as u32;
-                            (fit_h, width)
+                            print_image(resized_img);
                         }
-                    };
-
-                    let resized_img = resize_image(&rgba_img, target_w, target_h);
-
-                    // Calculate actual display height (in terminal lines)
-                    let display_height = if res {
-                        (target_h + 1) / 2  // Half-pixel mode uses 2 pixels per line
-                    } else {
-                        target_h
-                    };
-
-                    // Print the frame
-                    if res {
-                        print_image_hpm(resized_img);
-                    } else {
-                        print_image(resized_img);
                     }
 
-                    // FPS sync
-                    if sync {
-                        match dpf.saturating_mul(incr as u32).checked_sub(now.elapsed()) {
-                            Some(duration) => sleep(duration),
-                            None => incr += 1., // Frame skip if can't keep up
-                        };
+                    if should_render {
+                        frame_num += 1;
+
+                        // Debug info
+                        if debug {
+                            if let Some(st) = start_time {
+                                let elapsed = st.elapsed().as_secs_f64();
+                                let expected_time = frame_num as f64 * spf;
+                                let drift = elapsed - expected_time;
+                                print!("Frame: {} | Drift: {:.3}s | FPS: {:.1}",
+                                       frame_num, drift, frame_num as f64 / elapsed);
+                            }
+                        }
+
+                        stdout().flush().unwrap();
+                        print!("\x1b[{}F", display_height); // Move cursor to beginning
                     }
-
-                    frame_num += incr;
-
-                    // Debug info
-                    if debug {
-                        print!("Frame: {} | Frameskip: {}", frame_num, incr);
-                    }
-
-                    stdout().flush().unwrap();
-                    print!("\x1b[{}F", display_height); // Move cursor to beginning
                 }
 
                 // Check if we've reached the end
-                if total_frames > 0.0 && frame_num >= total_frames {
+                if total_frames > 0.0 && frame_num >= total_frames as u64 {
                     reached_end = true;
                     break;
                 }
@@ -396,7 +443,9 @@ pub fn process_video(file: &str, width: u32, height: u32, audio: bool,
                 // Seek back to beginning for loop
                 ictx.seek(0, ..0).ok();
                 decoder.flush();
-                frame_num = 0.;
+                frame_num = 0;
+                start_time = None;
+                audio_started = false;
                 continue 'main_loop;
             }
             break 'main_loop;
@@ -406,7 +455,9 @@ pub fn process_video(file: &str, width: u32, height: u32, audio: bool,
         if loop_video {
             ictx.seek(0, ..0).ok();
             decoder.flush();
-            frame_num = 0.;
+            frame_num = 0;
+            start_time = None;
+            audio_started = false;
         } else {
             break;
         }

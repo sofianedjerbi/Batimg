@@ -4,8 +4,14 @@
 use terminal_size::{Width, Height, terminal_size};
 use clap::{App, Arg};
 use ctrlc;
+use regex::Regex;
 
 use std::path::Path;
+use std::process::{Command, Stdio};
+use std::io::{BufRead, BufReader};
+use std::thread;
+use std::time::Duration;
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
 mod graphics;
 
@@ -15,6 +21,105 @@ const SUPPORTED_VIDEOS: [&str; 23] = ["gif", "avi", "mp4", "mkv", "m2v",
                                       "mov", "wmv", "avchd", "m4p",
                                       "f4v", "swf", "mkv", "yuv", "webm",
                                       "amv", "m4v", "3gp", "3g2", "nsv"];
+
+fn is_youtube_url(input: &str) -> bool {
+    let youtube_regex = Regex::new(
+        r"^(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/)|youtu\.be/)[\w-]+"
+    ).unwrap();
+    youtube_regex.is_match(input)
+}
+
+fn download_youtube_video(url: &str) -> Result<String, String> {
+    println!("Fetching YouTube video...");
+
+    // Create a temporary directory for the video
+    let temp_dir = tempfile::tempdir()
+        .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+    let temp_path = temp_dir.path().join("video.mp4");
+
+    // Start loading animation in a separate thread
+    let loading = Arc::new(AtomicBool::new(true));
+    let loading_clone = Arc::clone(&loading);
+
+    let spinner_thread = thread::spawn(move || {
+        let frames = vec!["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+        let mut idx = 0;
+        while loading_clone.load(Ordering::Relaxed) {
+            print!("\r{} Downloading... ", frames[idx]);
+            std::io::Write::flush(&mut std::io::stdout()).ok();
+            idx = (idx + 1) % frames.len();
+            thread::sleep(Duration::from_millis(80));
+        }
+        print!("\r\x1b[K"); // Clear the line
+        std::io::Write::flush(&mut std::io::stdout()).ok();
+    });
+
+    // Use yt-dlp to download the video with progress output
+    let child_result = Command::new("yt-dlp")
+        .arg("-f")
+        .arg("best[height<=720][ext=mp4]/best[height<=720]/best")
+        .arg("--no-playlist")
+        .arg("--quiet")
+        .arg("--progress")
+        .arg("--newline")
+        .arg("-o")
+        .arg(&temp_path)
+        .arg(url)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn();
+
+    let mut child = match child_result {
+        Ok(c) => c,
+        Err(e) => {
+            loading.store(false, Ordering::Relaxed);
+            spinner_thread.join().ok();
+            return Err(format!("Failed to execute yt-dlp: {}. Make sure yt-dlp is installed.", e));
+        }
+    };
+
+    // Read stderr in real-time for progress
+    if let Some(stderr) = child.stderr.take() {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                // Show download progress percentage
+                if line.contains("%") && line.contains("of") {
+                    print!("\r\x1b[K{}", line.trim());
+                    std::io::Write::flush(&mut std::io::stdout()).ok();
+                }
+            }
+        }
+    }
+
+    let status = match child.wait() {
+        Ok(s) => s,
+        Err(e) => {
+            loading.store(false, Ordering::Relaxed);
+            spinner_thread.join().ok();
+            return Err(format!("Failed to wait for yt-dlp: {}", e));
+        }
+    };
+
+    // Stop the loading animation
+    loading.store(false, Ordering::Relaxed);
+    spinner_thread.join().ok();
+
+    if !status.success() {
+        return Err(format!("yt-dlp failed with exit code: {:?}", status.code()));
+    }
+
+    if !temp_path.exists() {
+        return Err("Download failed: video file not created".to_string());
+    }
+
+    println!("\r\x1b[K✓ Download complete!");
+
+    // Convert path to string and leak the temp dir to keep file alive
+    let path_str = temp_path.to_str().unwrap().to_string();
+    std::mem::forget(temp_dir); // Keep temp dir alive
+    Ok(path_str)
+}
 
 
 fn main() {
@@ -72,7 +177,7 @@ fn main() {
         .get_matches();
 
     // Variables to populate
-    let file: &str;
+    let file: String;
     let height: u32;
     let width: u32;
     let is_video: bool;
@@ -105,18 +210,28 @@ fn main() {
         std::process::exit(3);
     }
 
-    // GET INPUT FILE
-    if let Some(f) = matches.value_of("FILE") {
-        file = &f;
-    } else {
+    // GET INPUT FILE OR URL
+    let input = matches.value_of("FILE").unwrap_or_else(|| {
         eprintln!("No media specified.");
         std::process::exit(1);
-    }
+    });
 
-    // Check if the file exists
-    if !Path::new(file).exists() {
-        eprintln!("{}: No such media.", file);
-        std::process::exit(1);
+    // Check if input is a YouTube URL
+    if is_youtube_url(input) {
+        file = match download_youtube_video(input) {
+            Ok(path) => path,
+            Err(e) => {
+                eprintln!("Error downloading YouTube video: {}", e);
+                std::process::exit(2);
+            }
+        };
+    } else {
+        // Check if the file exists
+        if !Path::new(input).exists() {
+            eprintln!("{}: No such media.", input);
+            std::process::exit(1);
+        }
+        file = input.to_string();
     }
 
     // Check for video
@@ -130,11 +245,11 @@ fn main() {
 
     // PROCESS PICTURE
     if !is_video {
-        graphics::process_image(file, height, resolution);
+        graphics::process_image(&file, height, resolution);
     }
     // PROCESS VIDEO
     else {
-        graphics::process_video(file, width, height, play_audio,
+        graphics::process_video(&file, width, height, play_audio,
                                 resolution, loop_video,
                                 !timesync, debug);
     }

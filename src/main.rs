@@ -125,11 +125,13 @@ fn download_youtube_video(url: &str) -> Result<String, String> {
 fn main() {
     // Handle CTRL + C (on videos)
     ctrlc::set_handler(move || {
-        print!("\x1b[?25h"); // Show cursor again
-        print!("\x1b[0J"); // Clear everything
+        print!("\x1b[2J");     // Clear entire screen
+        print!("\x1b[H");      // Move cursor to home position
+        print!("\x1b[?25h");   // Show cursor again
+        print!("\x1b[0m");     // Reset all text attributes
+        std::io::Write::flush(&mut std::io::stdout()).ok();
         graphics::clean_tmp_files(); // Remove tmp files
-        println!("Exiting.");
-        std::process::exit(0); // Exit process
+        std::process::exit(0); // Exit process cleanly
     }).expect("Error setting Ctrl-C handler");
 
     // Load cli config

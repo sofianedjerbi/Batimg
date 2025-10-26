@@ -463,8 +463,12 @@ pub fn process_video(file: &str, width: u32, height: u32, audio: bool,
         }
     }
 
-    print!("\x1b[?2J"); // Clean screen
-    print!("\x1b[?25h"); // Show cursor
+    // Clean up and restore terminal state
+    print!("\x1b[2J");     // Clear entire screen
+    print!("\x1b[H");      // Move cursor to home position
+    print!("\x1b[?25h");   // Show cursor again
+    print!("\x1b[0m");     // Reset all text attributes
+    stdout().flush().unwrap();
     clean_tmp_files();
 }
 
